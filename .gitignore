@@ -1,0 +1,5 @@
+# Local planning documents (symlink into ~/meu-moodle/plans/)
+.plans
+
+# AI reviewer context — local dev tool, not part of the plugin package
+.ai-review-context.md
