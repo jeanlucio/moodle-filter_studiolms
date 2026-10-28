@@ -61,28 +61,67 @@ class participation {
     }
 
     /**
+     * Works out what the bar measures for a forum: the rules of its activity completion, when it has any.
+     *
+     * Every rule the teacher ticked must be met, as in the completion of the activity, and "at least" the number the rule
+     * asks for. A forum with no rule (or with completion that is not automatic) measures any message, topic or reply.
+     * The rules only choose what to count: the widget does not read, give or change anyone's completion.
+     *
+     * @param \cm_info $cm The forum.
+     * @return array The keys kind (posts, discussions or replies, which picks the labels), and the minimums
+     *               posts, discussions and replies, 0 for a rule that is not used.
+     */
+    public static function get_measure(\cm_info $cm): array {
+        global $CFG;
+        require_once($CFG->libdir . '/completionlib.php');
+
+        $rules = [];
+        $tracking = (new \completion_info($cm->get_course()))->is_enabled($cm);
+        if ($tracking == COMPLETION_TRACKING_AUTOMATIC) {
+            $rules = $cm->customdata['customcompletionrules'] ?? [];
+        }
+        $discussions = max(0, (int) ($rules['completiondiscussions'] ?? 0));
+        $replies = max(0, (int) ($rules['completionreplies'] ?? 0));
+        $posts = max(0, (int) ($rules['completionposts'] ?? 0));
+        if ($discussions === 0 && $replies === 0 && $posts === 0) {
+            $posts = 1;
+        }
+
+        $kind = 'posts';
+        if ($posts === 0 && $replies === 0) {
+            $kind = 'discussions';
+        } else if ($posts === 0 && $discussions === 0) {
+            $kind = 'replies';
+        }
+        return ['kind' => $kind, 'posts' => $posts, 'discussions' => $discussions, 'replies' => $replies];
+    }
+
+    /**
      * Returns the counts of the forum for a set of groups, from the cache when it is fresh.
      *
      * @param int $forumid The forum id.
      * @param \context $context The context of the forum.
      * @param int[]|null $groupids Null for the whole class.
-     * @return int[] The keys total, replied and startedonly.
+     * @param array $measure What to count, from get_measure().
+     * @return int[] The keys total (the whole population) and done (those who did what the measure asks).
      */
-    public static function get_counts(int $forumid, \context $context, ?array $groupids): array {
+    public static function get_counts(int $forumid, \context $context, ?array $groupids, array $measure): array {
         if ($groupids !== null && $groupids === []) {
-            return ['total' => 0, 'replied' => 0, 'startedonly' => 0];
+            return ['total' => 0, 'done' => 0];
         }
 
         $cache = \cache::make('filter_studiolms', 'participation');
-        $groupkey = $groupids === null ? 'all' : implode(',', $groupids);
+        // The rules may change while a forum is cached, so they are part of the key.
+        $key = ($groupids === null ? 'all' : implode(',', $groupids))
+            . ':' . $measure['posts'] . '-' . $measure['discussions'] . '-' . $measure['replies'];
         $entry = $cache->get($forumid);
-        if (is_array($entry) && isset($entry[$groupkey])) {
-            return $entry[$groupkey];
+        if (is_array($entry) && isset($entry[$key])) {
+            return $entry[$key];
         }
 
-        $counts = self::calculate($forumid, $context, $groupids);
+        $counts = self::calculate($forumid, $context, $groupids, $measure);
         $entry = is_array($entry) ? $entry : [];
-        $entry[$groupkey] = $counts;
+        $entry[$key] = $counts;
         $cache->set($forumid, $entry);
         return $counts;
     }
@@ -97,18 +136,19 @@ class participation {
     }
 
     /**
-     * Counts the students who replied, who only started a topic, and the whole population.
+     * Counts the whole population and those who did what the measure asks, in one query.
      *
      * The population is the active students (holders of moodle/course:isincompletionreports, the capability that
      * marks the student role) who can post in the forum. Teachers who post are left out because they are not in it.
-     * Replies sent privately by a teacher and deleted posts never count.
+     * Deleted posts and replies sent privately by a teacher never count.
      *
      * @param int $forumid The forum id.
      * @param \context $context The context of the forum.
      * @param int[]|null $groupids Null for the whole class.
-     * @return int[] The keys total, replied and startedonly.
+     * @param array $measure What to count, from get_measure().
+     * @return int[] The keys total and done.
      */
-    public static function calculate(int $forumid, \context $context, ?array $groupids): array {
+    public static function calculate(int $forumid, \context $context, ?array $groupids, array $measure): array {
         global $DB;
 
         [$studentsql, $studentparams] = get_enrolled_sql(
@@ -120,63 +160,52 @@ class participation {
         [$postersql, $posterparams] = get_enrolled_sql($context, 'mod/forum:replypost', 0, true);
 
         $sql = "SELECT COUNT(u.id) AS total,
-                       COALESCE(SUM(CASE WHEN a.replies > 0 THEN 1 ELSE 0 END), 0) AS replied,
-                       COALESCE(SUM(CASE WHEN a.replies IS NULL OR a.replies = 0 THEN
-                                         CASE WHEN a.topics > 0 THEN 1 ELSE 0 END
-                                    ELSE 0 END), 0) AS startedonly
+                       COALESCE(SUM(CASE WHEN COALESCE(a.topics, 0) >= :mindiscussions
+                                          AND COALESCE(a.replies, 0) >= :minreplies
+                                          AND COALESCE(a.posts, 0) >= :minposts THEN 1 ELSE 0 END), 0) AS done
                   FROM {user} u
              LEFT JOIN (SELECT p.userid,
                                SUM(CASE WHEN p.parent <> 0 THEN 1 ELSE 0 END) AS replies,
-                               SUM(CASE WHEN p.parent = 0 THEN 1 ELSE 0 END) AS topics
+                               SUM(CASE WHEN p.parent = 0 THEN 1 ELSE 0 END) AS topics,
+                               COUNT(p.id) AS posts
                           FROM {forum_posts} p
                           JOIN {forum_discussions} d ON d.id = p.discussion
                          WHERE d.forum = :forumid AND p.deleted = 0 AND p.privatereplyto = 0
                       GROUP BY p.userid) a ON a.userid = u.id
                  WHERE u.id IN ($studentsql) AND u.id IN ($postersql)";
-        $record = $DB->get_record_sql($sql, ['forumid' => $forumid] + $studentparams + $posterparams);
+        $params = [
+            'forumid' => $forumid,
+            'mindiscussions' => $measure['discussions'],
+            'minreplies' => $measure['replies'],
+            'minposts' => $measure['posts'],
+        ] + $studentparams + $posterparams;
+        $record = $DB->get_record_sql($sql, $params);
 
-        return [
-            'total' => (int) $record->total,
-            'replied' => (int) $record->replied,
-            'startedonly' => (int) $record->startedonly,
-        ];
+        return ['total' => (int) $record->total, 'done' => (int) $record->done];
     }
 
     /**
-     * Turns the three counts into whole percentages that add up to 100 (largest remainder method).
+     * Turns the counts into the two whole percentages, which always add up to 100.
      *
-     * @param int $replied Students who replied.
-     * @param int $startedonly Students who only started a topic.
+     * Rounding never hides someone: while at least one person is in a group, that group shows at least 1%, and
+     * while someone is outside the first one it never reaches 100%.
+     *
+     * @param int $done Those who did what the measure asks.
      * @param int $total The whole population.
-     * @return int[] The keys replied, startedonly and notparticipated.
+     * @return int[] The keys done and todo.
      */
-    public static function percentages(int $replied, int $startedonly, int $total): array {
+    public static function percentages(int $done, int $total): array {
         if ($total <= 0) {
-            return ['replied' => 0, 'startedonly' => 0, 'notparticipated' => 0];
+            return ['done' => 0, 'todo' => 0];
         }
-        $counts = [
-            'replied' => $replied,
-            'startedonly' => $startedonly,
-            'notparticipated' => max(0, $total - $replied - $startedonly),
-        ];
-        $sum = array_sum($counts);
-        $floors = [];
-        $remainders = [];
-        foreach ($counts as $key => $count) {
-            $exact = $count * 100 / $sum;
-            $floors[$key] = (int) floor($exact);
-            $remainders[$key] = $exact - $floors[$key];
+        $done = min($done, $total);
+        $percent = (int) round($done * 100 / $total);
+        if ($done > 0) {
+            $percent = max($percent, 1);
         }
-        // The fixed order of the keys breaks ties, so the same counts always give the same bar.
-        arsort($remainders, SORT_NUMERIC);
-        $missing = 100 - array_sum($floors);
-        foreach (array_keys($remainders) as $key) {
-            if ($missing <= 0) {
-                break;
-            }
-            $floors[$key]++;
-            $missing--;
+        if ($done < $total) {
+            $percent = min($percent, 99);
         }
-        return $floors;
+        return ['done' => $percent, 'todo' => 100 - $percent];
     }
 }

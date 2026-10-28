@@ -45,15 +45,11 @@ div.slw-bar .slw-bar-segment {
     block-size: 100%;
 }
 
-div.slw-bar .slw-bar-replied {
+div.slw-bar .slw-bar-done {
     background-color: var(--bs-success, #198754);
 }
 
-div.slw-bar .slw-bar-startedonly {
-    background-color: var(--slw-started, #b45f06);
-}
-
-div.slw-bar .slw-bar-notparticipated {
+div.slw-bar .slw-bar-todo {
     background-color: var(--bs-gray-600, #6c757d);
 }
 

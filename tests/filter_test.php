@@ -52,7 +52,7 @@ final class filter_test extends \advanced_testcase {
     }
 
     /**
-     * A forum of ten students: five reply, two open a topic, three do nothing. Logs in the first student.
+     * A forum of ten students: five reply, two open a topic, three do nothing (so seven took part). Logs in the first student.
      *
      * @return array The setup of make_forum_course().
      */
@@ -102,12 +102,12 @@ final class filter_test extends \advanced_testcase {
         $this->assertStringContainsString('<p>After</p>', $html);
         $this->assertStringNotContainsString('[FORUMSTATS]', $html);
         $this->assertStringContainsString('slw-bar', $html);
-        $this->assertStringContainsString('50%', $html);
-        $this->assertStringContainsString('20%', $html);
+        $this->assertStringContainsString('70%', $html);
         $this->assertStringContainsString('30%', $html);
-        $this->assertStringContainsString('width: 50.00%', $html);
-        // A student does not see the counts.
-        $this->assertStringNotContainsString('5 of 10', $html);
+        $this->assertStringContainsString('width: 70.00%', $html);
+        // The counts are shown to students too.
+        $this->assertStringContainsString('7 of 10', $html);
+        $this->assertStringContainsString('3 of 10', $html);
     }
 
     /**
@@ -184,20 +184,18 @@ final class filter_test extends \advanced_testcase {
     }
 
     /**
-     * Who manages the course also sees the counts beside the percentages.
+     * Who manages the course sees the same bar, and no warning when the class is big enough.
      *
      * @return void
      */
-    public function test_teacher_sees_the_counts(): void {
+    public function test_teacher_sees_the_bar_without_the_warning(): void {
         $this->resetAfterTest();
         $setup = $this->make_active_forum();
         $this->setUser($setup['teacher']);
 
         $html = $this->make_filter(\context_module::instance($setup['cm']->id))->filter('[FORUMSTATS]');
 
-        $this->assertStringContainsString('5 of 10', $html);
-        $this->assertStringContainsString('2 of 10', $html);
-        $this->assertStringContainsString('3 of 10', $html);
+        $this->assertStringContainsString('7 of 10', $html);
         $this->assertStringNotContainsString(get_string('hiddenforstudents', 'filter_studiolms', 5), $html);
     }
 
@@ -213,15 +211,47 @@ final class filter_test extends \advanced_testcase {
 
         $cleaned = clean_text($html, FORMAT_HTML);
 
-        $needles = [
-            'slw-bar-track', 'slw-bar-replied', 'slw-bar-startedonly', 'slw-bar-notparticipated',
-            'width:50%', 'width:20%', 'width:30%', 'slw-bar-legend', 'slw-bar-value',
-        ];
+        $needles = ['slw-bar-track', 'slw-bar-done', 'slw-bar-todo', 'width:70%', 'width:30%', 'slw-bar-legend', 'slw-bar-value'];
         foreach ($needles as $needle) {
             $this->assertStringContainsString($needle, $cleaned, $needle);
         }
         $this->assertSame(substr_count($html, 'slw-bar-segment'), substr_count($cleaned, 'slw-bar-segment'));
         $this->assertDoesNotMatchRegularExpression('/<svg|data-|aria-|role=/', $html);
+    }
+
+    /**
+     * The labels follow the completion rule of the forum, and the bar counts what the rule asks.
+     *
+     * @return void
+     */
+    public function test_labels_and_numbers_follow_the_completion_rule(): void {
+        global $CFG;
+        $this->resetAfterTest();
+        $CFG->enablecompletion = true;
+        $cases = [
+            ['completionreplies' => 1, 'completiondiscussions' => 0, 'label' => 'Sent replies', 'done' => 5],
+            ['completionreplies' => 0, 'completiondiscussions' => 1, 'label' => 'Started discussions', 'done' => 2],
+            ['completionreplies' => 0, 'completiondiscussions' => 0, 'label' => 'Participated', 'done' => 7],
+        ];
+        foreach ($cases as $case) {
+            $setup = $this->make_forum_course(10, [
+                'completion' => COMPLETION_TRACKING_AUTOMATIC,
+                'completionreplies' => $case['completionreplies'],
+                'completiondiscussions' => $case['completiondiscussions'],
+            ], ['enablecompletion' => 1]);
+            $discussion = $this->start_discussion($setup, $setup['teacher']);
+            for ($i = 0; $i < 5; $i++) {
+                $this->reply_to($discussion, $setup['students'][$i]);
+            }
+            $this->start_discussion($setup, $setup['students'][5]);
+            $this->start_discussion($setup, $setup['students'][6]);
+            $this->setUser($setup['teacher']);
+
+            $html = $this->make_filter(\context_module::instance($setup['cm']->id))->filter('[FORUMSTATS]');
+
+            $this->assertStringContainsString($case['label'], $html, $case['label']);
+            $this->assertStringContainsString($case['done'] . ' of 10', $html, $case['label']);
+        }
     }
 
     /**

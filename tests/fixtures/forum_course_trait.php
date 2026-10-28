@@ -34,11 +34,12 @@ trait forum_course_trait {
      *
      * @param int $students How many students to enrol.
      * @param array $forumoptions Extra options for the forum.
+     * @param array $courseoptions Extra options for the course.
      * @return array The keys course, forum, cm, students (user records) and teacher.
      */
-    protected function make_forum_course(int $students, array $forumoptions = []): array {
+    protected function make_forum_course(int $students, array $forumoptions = [], array $courseoptions = []): array {
         $generator = $this->getDataGenerator();
-        $course = $generator->create_course();
+        $course = $generator->create_course($courseoptions);
         $forum = $generator->create_module('forum', ['course' => $course->id] + $forumoptions);
         $studentlist = [];
         for ($i = 0; $i < $students; $i++) {

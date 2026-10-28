@@ -33,32 +33,25 @@ class bar {
     /**
      * Exports the context of the template.
      *
-     * @param int[] $counts The keys total, replied and startedonly.
-     * @param bool $showcounts Whether to show "n of N" beside each percentage (people who manage the course).
+     * @param int[] $counts The keys total and done.
+     * @param string $kind What the bar measures: posts, discussions or replies, which picks the labels.
      * @param int $hiddenbelow When above 0, the minimum class size that hides the bar from students.
      * @return array
      */
-    public static function export_context(array $counts, bool $showcounts, int $hiddenbelow = 0): array {
+    public static function export_context(array $counts, string $kind, int $hiddenbelow = 0): array {
         $total = $counts['total'];
-        $notparticipated = max(0, $total - $counts['replied'] - $counts['startedonly']);
-        $numbers = [
-            'replied' => $counts['replied'],
-            'startedonly' => $counts['startedonly'],
-            'notparticipated' => $notparticipated,
-        ];
-        $percentages = participation::percentages($counts['replied'], $counts['startedonly'], $total);
+        $numbers = ['done' => $counts['done'], 'todo' => max(0, $total - $counts['done'])];
+        $percentages = participation::percentages($counts['done'], $total);
 
         $segments = [];
         foreach ($numbers as $key => $count) {
             $segments[] = [
                 'key' => $key,
-                'label' => get_string($key, 'filter_studiolms'),
+                'label' => get_string("measure_{$kind}_{$key}", 'filter_studiolms'),
                 'percent' => $percentages[$key],
                 'width' => number_format($count * 100 / $total, 2, '.', ''),
                 'hasbar' => $count > 0,
-                'counttext' => $showcounts
-                    ? get_string('count_of', 'filter_studiolms', ['count' => $count, 'total' => $total])
-                    : '',
+                'counttext' => get_string('count_of', 'filter_studiolms', ['count' => $count, 'total' => $total]),
             ];
         }
 
