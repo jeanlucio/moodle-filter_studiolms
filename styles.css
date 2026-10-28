@@ -54,7 +54,7 @@ div.slw-bar .slw-bar-startedonly {
 }
 
 div.slw-bar .slw-bar-notparticipated {
-    background-color: var(--bs-secondary, #6c757d);
+    background-color: var(--bs-gray-600, #6c757d);
 }
 
 div.slw-bar ul.slw-bar-legend {
