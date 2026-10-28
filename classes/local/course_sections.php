@@ -85,11 +85,10 @@ class course_sections {
         $position = 0;
         foreach ($included as $number => $section) {
             $position++;
-            $url = $format->get_view_url($section);
             $steps[] = [
                 'number' => $position,
                 'name' => self::get_name($format, $section, $position),
-                'url' => $url ? $url->out(false) : '',
+                'url' => self::get_url($format, $section),
                 'state' => $states[$number],
             ];
         }
@@ -163,6 +162,31 @@ class course_sections {
             }
         }
         return $states;
+    }
+
+    /**
+     * Returns the address of a section, which always tells the sections apart.
+     *
+     * The topics format of Moodle 4.5 gives the address of the whole course page for every section, so the anchor of
+     * the section is added when the format left it out.
+     *
+     * @param \core_courseformat\base $format The format of the course.
+     * @param \section_info $section The section.
+     * @return string The address, or an empty string when the format has none.
+     */
+    private static function get_url(\core_courseformat\base $format, \section_info $section): string {
+        $url = $format->get_view_url($section);
+        if (!$url) {
+            return '';
+        }
+        $address = $url->out(false);
+        $wholepage = $url->get_path() === '/course/view.php' && $url->get_param('section') === null
+            && strpos($address, '#') === false;
+        if ($wholepage) {
+            $url->set_anchor('section-' . $section->section);
+            $address = $url->out(false);
+        }
+        return $address;
     }
 
     /**

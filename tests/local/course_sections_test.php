@@ -74,6 +74,27 @@ final class course_sections_test extends \advanced_testcase {
     }
 
     /**
+     * With all the sections on one page every step still has its own address, with the anchor of its section.
+     *
+     * Regression guard: the topics format of Moodle 4.5 returns the address of the whole page for every section.
+     *
+     * @return void
+     */
+    public function test_single_page_course_gives_each_step_its_own_anchor(): void {
+        $this->resetAfterTest();
+        $setup = $this->make_course(3, ['coursedisplay' => COURSE_DISPLAY_SINGLEPAGE]);
+        $this->setUser($setup['student']);
+
+        $steps = course_sections::get_steps((int) $setup['course']->id);
+
+        $urls = array_column($steps, 'url');
+        $this->assertCount(3, array_unique($urls));
+        foreach ($urls as $position => $url) {
+            $this->assertStringContainsString('#section-' . ($position + 1), $url);
+        }
+    }
+
+    /**
      * A hidden section is left out for the student and kept for the teacher; numbering stays in sequence.
      *
      * @return void
