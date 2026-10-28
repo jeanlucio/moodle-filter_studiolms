@@ -282,7 +282,8 @@ final class filter_test extends \advanced_testcase {
         $this->assertStringNotContainsString('&amp;amp;', $html);
         $this->assertStringContainsString('slw-map-current', $html);
         $this->assertStringContainsString('Current step', $html);
-        $this->assertStringContainsString('Done', $html);
+        $this->assertStringContainsString('Previous step', $html);
+        $this->assertStringNotContainsString('Done', $html);
 
         $this->setUser($teacher);
         $teacherhtml = $filter->filter('[COURSEMAP]');
@@ -292,6 +293,40 @@ final class filter_test extends \advanced_testcase {
         $tiles = $filter->filter('[COURSEMAP style=tiles]');
         $this->assertStringContainsString('slw-map-tiles', $tiles);
         $this->assertStringContainsString('slw-map-steps', $filter->filter('[COURSEMAP style=bogus]'));
+    }
+
+    /**
+     * The progress option of the marker makes the map follow the completion of whoever is looking.
+     *
+     * @return void
+     */
+    public function test_course_map_progress_option(): void {
+        global $CFG;
+        $this->resetAfterTest();
+        $CFG->enablecompletion = true;
+        $generator = $this->getDataGenerator();
+        $course = $generator->create_course(['numsections' => 2, 'format' => 'topics', 'enablecompletion' => 1]);
+        $student = $generator->create_user();
+        $generator->enrol_user($student->id, $course->id, 'student');
+        $tracked = ['course' => $course->id, 'completion' => COMPLETION_TRACKING_MANUAL];
+        $page = $generator->create_module('page', ['section' => 1] + $tracked);
+        $generator->create_module('page', ['section' => 2] + $tracked);
+        $this->setUser($student);
+        $filter = $this->make_filter(\context_course::instance($course->id));
+
+        $before = $filter->filter('[COURSEMAP current=progress]');
+        $this->assertSame(1, substr_count($before, 'slw-map-current'));
+        $this->assertStringNotContainsString('Done', $before);
+
+        $cm = get_fast_modinfo($course)->get_cm($page->cmid);
+        (new \completion_info($course))->update_state($cm, COMPLETION_COMPLETE, $student->id);
+        $after = $filter->filter('[COURSEMAP current=progress]');
+        $this->assertStringContainsString('Done', $after);
+        $this->assertStringNotContainsString('Previous step', $after);
+
+        // Without the option the map ignores completion, and an unknown value is the same as no option.
+        $this->assertStringNotContainsString('slw-map-current', $filter->filter('[COURSEMAP]'));
+        $this->assertStringNotContainsString('slw-map-current', $filter->filter('[COURSEMAP current=bogus]'));
     }
 
     /**

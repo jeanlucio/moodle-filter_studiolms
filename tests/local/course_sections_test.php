@@ -196,6 +196,139 @@ final class course_sections_test extends \advanced_testcase {
     }
 
     /**
+     * The state of each step of the map of a course for the current user.
+     *
+     * @param int $courseid The course id.
+     * @param string $mode date or progress.
+     * @return string[]
+     */
+    private function states(int $courseid, string $mode = 'date'): array {
+        return array_column(course_sections::get_steps($courseid, $mode), 'state');
+    }
+
+    /**
+     * Makes a course with completion and sections holding activities with and without a completion rule.
+     *
+     * Section 1 has two tracked pages, section 2 one tracked page, section 3 a page with no rule and section 4 one
+     * tracked page.
+     *
+     * @return array The keys course, student, other (a second student), teacher and cms (the tracked ones by name).
+     */
+    private function make_progress_course(): array {
+        global $CFG;
+        $CFG->enablecompletion = true;
+        $setup = $this->make_course(4, ['enablecompletion' => 1]);
+        $generator = $this->getDataGenerator();
+        $setup['other'] = $generator->create_user();
+        $generator->enrol_user($setup['other']->id, $setup['course']->id, 'student');
+        $tracked = ['completion' => COMPLETION_TRACKING_MANUAL];
+        $course = $setup['course']->id;
+        $setup['cms'] = [
+            'a' => $generator->create_module('page', ['course' => $course, 'section' => 1] + $tracked),
+            'b' => $generator->create_module('page', ['course' => $course, 'section' => 1] + $tracked),
+            'c' => $generator->create_module('page', ['course' => $course, 'section' => 2] + $tracked),
+            'd' => $generator->create_module('page', ['course' => $course, 'section' => 3]),
+            'e' => $generator->create_module('page', ['course' => $course, 'section' => 4] + $tracked),
+        ];
+        return $setup;
+    }
+
+    /**
+     * Completes an activity for a user through the completion API, as the tick of the page does.
+     *
+     * @param array $setup The result of make_progress_course().
+     * @param string $key The activity.
+     * @param \stdClass $user The user.
+     * @return void
+     */
+    private function complete(array $setup, string $key, \stdClass $user): void {
+        $this->setUser($user);
+        $cm = get_fast_modinfo($setup['course']->id)->get_cm($setup['cms'][$key]->cmid);
+        (new \completion_info($setup['course']))->update_state($cm, COMPLETION_COMPLETE, $user->id);
+    }
+
+    /**
+     * The progress mode follows the activities the student finished: a section is done when all of its tracked
+     * activities are, the first with something left is the current step, and a section with no rule is not marked.
+     *
+     * @return void
+     */
+    public function test_progress_mode_follows_the_completion_of_the_student(): void {
+        $this->resetAfterTest();
+        $setup = $this->make_progress_course();
+        $courseid = (int) $setup['course']->id;
+
+        $this->setUser($setup['student']);
+        $this->assertSame(['current', 'todo', 'none', 'todo'], $this->states($courseid, 'progress'));
+
+        $this->complete($setup, 'a', $setup['student']);
+        $this->assertSame(['current', 'todo', 'none', 'todo'], $this->states($courseid, 'progress'));
+
+        $this->complete($setup, 'b', $setup['student']);
+        $this->assertSame(['done', 'current', 'none', 'todo'], $this->states($courseid, 'progress'));
+
+        $this->complete($setup, 'c', $setup['student']);
+        $this->assertSame(['done', 'done', 'none', 'current'], $this->states($courseid, 'progress'));
+
+        $this->complete($setup, 'e', $setup['student']);
+        $this->assertSame(['done', 'done', 'none', 'done'], $this->states($courseid, 'progress'));
+    }
+
+    /**
+     * Each student sees only their own progress, and the date mode ignores completion altogether.
+     *
+     * @return void
+     */
+    public function test_progress_is_the_viewers_own(): void {
+        $this->resetAfterTest();
+        $setup = $this->make_progress_course();
+        $courseid = (int) $setup['course']->id;
+        $this->complete($setup, 'a', $setup['student']);
+        $this->complete($setup, 'b', $setup['student']);
+
+        $this->setUser($setup['other']);
+        $this->assertSame(['current', 'todo', 'none', 'todo'], $this->states($courseid, 'progress'));
+        $this->assertSame(['none', 'none', 'none', 'none'], $this->states($courseid, 'date'));
+        $this->assertSame(['none', 'none', 'none', 'none'], $this->states($courseid));
+
+        $this->setUser($setup['student']);
+        $this->assertSame('done', course_sections::get_steps($courseid, 'progress')[0]['state']);
+    }
+
+    /**
+     * A hidden activity does not count, and with completion off in the course nothing is marked.
+     *
+     * @return void
+     */
+    public function test_progress_ignores_hidden_activities_and_needs_completion_enabled(): void {
+        global $CFG;
+        $this->resetAfterTest();
+        $setup = $this->make_progress_course();
+        $courseid = (int) $setup['course']->id;
+        $this->complete($setup, 'a', $setup['student']);
+        set_coursemodule_visible($setup['cms']['b']->cmid, 0);
+        rebuild_course_cache($courseid, true);
+
+        $this->setUser($setup['student']);
+        $this->assertSame('done', course_sections::get_steps($courseid, 'progress')[0]['state']);
+
+        $CFG->enablecompletion = false;
+        $this->assertSame(['none', 'none', 'none', 'none'], $this->states($courseid, 'progress'));
+    }
+
+    /**
+     * The marker picks the mode, and anything unknown is the date.
+     *
+     * @return void
+     */
+    public function test_mode(): void {
+        $this->assertSame('progress', course_sections::get_mode('progress'));
+        $this->assertSame('date', course_sections::get_mode(''));
+        $this->assertSame('date', course_sections::get_mode('Progress'));
+        $this->assertSame('date', course_sections::get_mode('x" onclick="y'));
+    }
+
+    /**
      * Steps up to twelve, tiles above, and the marker can force either.
      *
      * @return void
@@ -224,9 +357,13 @@ final class course_sections_test extends \advanced_testcase {
         $this->assertCount(2, $context['rows']);
         $this->assertCount(6, $context['rows'][0]['steps']);
         $this->assertCount(2, $context['rows'][1]['steps']);
-        $this->assertSame('Done', $context['rows'][0]['steps'][0]['statetext']);
+        $this->assertSame('Previous step', $context['rows'][0]['steps'][0]['statetext']);
         $this->assertSame('Current step', $context['rows'][0]['steps'][1]['statetext']);
         $this->assertSame('', $context['rows'][0]['steps'][2]['statetext']);
+
+        // In the progress mode the same state means the section was finished.
+        $progress = \filter_studiolms\output\map::export_context($steps, 'steps', 'progress');
+        $this->assertSame('Done', $progress['rows'][0]['steps'][0]['statetext']);
 
         $tiles = \filter_studiolms\output\map::export_context($steps, 'tiles');
         $this->assertCount(1, $tiles['rows']);

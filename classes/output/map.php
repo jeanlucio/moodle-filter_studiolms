@@ -35,11 +35,12 @@ class map {
      *
      * @param array[] $steps The steps from course_sections::get_steps().
      * @param string $layout steps or tiles.
+     * @param string $mode date or progress: what "done" means, so what the label says.
      * @return array
      */
-    public static function export_context(array $steps, string $layout): array {
+    public static function export_context(array $steps, string $layout, string $mode = 'date'): array {
         $texts = [
-            'done' => get_string('map_done', 'filter_studiolms'),
+            'done' => get_string($mode === 'progress' ? 'map_done' : 'map_previous', 'filter_studiolms'),
             'current' => get_string('map_current', 'filter_studiolms'),
         ];
         foreach ($steps as &$step) {

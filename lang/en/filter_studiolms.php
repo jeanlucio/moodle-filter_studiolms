@@ -41,6 +41,7 @@ $string['formlabel'] = 'Class participation';
 $string['hiddenforstudents'] = 'Hidden from students: the class has fewer than {$a} students.';
 $string['map_current'] = 'Current step';
 $string['map_done'] = 'Done';
+$string['map_previous'] = 'Previous step';
 $string['map_title'] = 'Course map';
 $string['minclasssize'] = 'Minimum class size';
 $string['minclasssize_desc'] = 'Below this number of students the bar is hidden from students, so nobody can be identified.';

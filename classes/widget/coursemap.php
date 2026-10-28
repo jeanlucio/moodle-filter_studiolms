@@ -51,13 +51,14 @@ class coursemap implements widget {
         global $OUTPUT;
 
         $courseid = $this->get_course_id($context);
-        $steps = $courseid > 0 ? course_sections::get_steps($courseid) : null;
+        $mode = course_sections::get_mode($options['current'] ?? '');
+        $steps = $courseid > 0 ? course_sections::get_steps($courseid, $mode) : null;
         if ($steps === null) {
             return '';
         }
 
         $layout = course_sections::get_layout(count($steps), $options['style'] ?? '');
-        return $OUTPUT->render_from_template('filter_studiolms/map', map::export_context($steps, $layout));
+        return $OUTPUT->render_from_template('filter_studiolms/map', map::export_context($steps, $layout, $mode));
     }
 
     /**

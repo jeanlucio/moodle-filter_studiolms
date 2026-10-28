@@ -41,6 +41,7 @@ $string['formlabel'] = 'Participação da turma';
 $string['hiddenforstudents'] = 'Oculto para estudantes: a turma tem menos de {$a} estudantes.';
 $string['map_current'] = 'Etapa atual';
 $string['map_done'] = 'Concluída';
+$string['map_previous'] = 'Etapa anterior';
 $string['map_title'] = 'Mapa do curso';
 $string['minclasssize'] = 'Tamanho mínimo da turma';
 $string['minclasssize_desc'] = 'Abaixo deste número de estudantes a barra fica oculta para estudantes, para ninguém ser identificado.';

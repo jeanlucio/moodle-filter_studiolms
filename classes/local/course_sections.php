@@ -37,25 +37,30 @@ class course_sections {
     /**
      * Builds the steps of the map of a course for the current user.
      *
-     * Section 0, sections the user cannot see and delegated sections (subsections) are left out. The current step is
-     * asked to the format of the course, which for topics is the section the teacher highlighted and for weeks the one
-     * that holds today. Steps before it are done, steps after it are upcoming; with no current section, or one the user
-     * cannot see, no step is marked.
+     * Section 0, sections the user cannot see and delegated sections (subsections) are left out.
+     *
+     * In the "date" mode the current step is asked to the format of the course, which for topics is the section the
+     * teacher highlighted and for weeks the one that holds today. Steps before it are previous, steps after it are
+     * upcoming; with no current section, or one the user cannot see, no step is marked.
+     *
+     * In the "progress" mode the steps follow the completion of the activities of the user: see get_progress_states().
      *
      * @param int $courseid The course id.
+     * @param string $mode date or progress; anything else means date.
      * @return array[]|null The steps, each with number, name, url and state (done, current, todo or none); null when
      *                      the format has no sections or the user sees none.
      */
-    public static function get_steps(int $courseid): ?array {
+    public static function get_steps(int $courseid, string $mode = 'date'): ?array {
         $course = get_course($courseid);
         $format = course_get_format($course);
         if (!$format->uses_sections()) {
             return null;
         }
 
+        $modinfo = get_fast_modinfo($course);
         $currentnumber = 0;
         $included = [];
-        foreach (get_fast_modinfo($course)->get_section_info_all() as $number => $section) {
+        foreach ($modinfo->get_section_info_all() as $number => $section) {
             if ($number < 1) {
                 continue;
             }
@@ -72,24 +77,92 @@ class course_sections {
             return null;
         }
 
-        $marked = isset($included[$currentnumber]);
+        $states = $mode === 'progress'
+            ? self::get_progress_states($course, $modinfo, $included)
+            : self::get_date_states($included, $currentnumber);
+
         $steps = [];
         $position = 0;
         foreach ($included as $number => $section) {
             $position++;
-            $state = 'none';
-            if ($marked) {
-                $state = $number < $currentnumber ? 'done' : ($number === $currentnumber ? 'current' : 'todo');
-            }
             $url = $format->get_view_url($section);
             $steps[] = [
                 'number' => $position,
                 'name' => self::get_name($format, $section, $position),
                 'url' => $url ? $url->out(false) : '',
-                'state' => $state,
+                'state' => $states[$number],
             ];
         }
         return $steps;
+    }
+
+    /**
+     * Gives each step its state from the current section of the format: before it, at it, after it.
+     *
+     * @param \section_info[] $included The sections shown, by section number.
+     * @param int $currentnumber The number of the section the format says is current, 0 for none.
+     * @return string[] The state of each section by number: done, current, todo, or none for every one when nothing
+     *                  is marked (no current section, or one the user does not see).
+     */
+    private static function get_date_states(array $included, int $currentnumber): array {
+        $marked = isset($included[$currentnumber]);
+        $states = [];
+        foreach (array_keys($included) as $number) {
+            $states[$number] = 'none';
+            if ($marked) {
+                $states[$number] = $number < $currentnumber ? 'done' : ($number === $currentnumber ? 'current' : 'todo');
+            }
+        }
+        return $states;
+    }
+
+    /**
+     * Gives each step its state from the completion of the activities of the current user.
+     *
+     * Only the activities the user sees and that have a completion rule count. A section where all of them are complete
+     * is done; the first section with one still to do is the current step, and the later ones with something to do are
+     * upcoming. A section with no activity that has a completion rule is left unmarked, since nothing says when it is
+     * finished. Only the data of the current user is read.
+     *
+     * @param \stdClass $course The course.
+     * @param \course_modinfo $modinfo The course structure for the current user.
+     * @param \section_info[] $included The sections shown, by section number.
+     * @return string[] The state of each section by number.
+     */
+    private static function get_progress_states(\stdClass $course, \course_modinfo $modinfo, array $included): array {
+        global $CFG, $USER;
+        require_once($CFG->libdir . '/completionlib.php');
+
+        $completion = new \completion_info($course);
+        $finished = [COMPLETION_COMPLETE, COMPLETION_COMPLETE_PASS];
+        $states = [];
+        $currentfound = false;
+        foreach (array_keys($included) as $number) {
+            $tracked = 0;
+            $complete = 0;
+            foreach ($modinfo->sections[$number] ?? [] as $cmid) {
+                $cm = $modinfo->cms[$cmid];
+                if (!$cm->uservisible || $completion->is_enabled($cm) == COMPLETION_TRACKING_NONE) {
+                    continue;
+                }
+                $tracked++;
+                $data = $completion->get_data($cm, true, (int) $USER->id);
+                if (in_array((int) $data->completionstate, $finished, true)) {
+                    $complete++;
+                }
+            }
+            if ($tracked === 0) {
+                $states[$number] = 'none';
+            } else if ($complete === $tracked) {
+                $states[$number] = 'done';
+            } else if (!$currentfound) {
+                $states[$number] = 'current';
+                $currentfound = true;
+            } else {
+                $states[$number] = 'todo';
+            }
+        }
+        return $states;
     }
 
     /**
@@ -103,6 +176,16 @@ class course_sections {
     private static function get_name(\core_courseformat\base $format, \section_info $section, int $position): string {
         $name = html_entity_decode(strip_tags((string) $format->get_section_name($section)), ENT_QUOTES);
         return trim($name) !== '' ? $name : get_string('section') . ' ' . $position;
+    }
+
+    /**
+     * Picks the way the current step is decided: the option of the marker, or the date.
+     *
+     * @param string $current The current option of the marker; anything but progress means date.
+     * @return string date or progress.
+     */
+    public static function get_mode(string $current): string {
+        return $current === 'progress' ? 'progress' : 'date';
     }
 
     /**
