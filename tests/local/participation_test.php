@@ -243,14 +243,20 @@ final class participation_test extends \advanced_testcase {
      * @return void
      */
     public function test_percentages_add_up_and_never_hide_anyone(): void {
+        // Every case is checked, but the failures are gathered so the test counts as one assertion, not thousands.
+        $failures = [];
         for ($total = 1; $total <= 300; $total += 7) {
             for ($done = 0; $done <= $total; $done++) {
                 $percentages = participation::percentages($done, $total);
-                $this->assertSame(100, array_sum($percentages), "$done/$total");
-                $this->assertSame($done > 0, $percentages['done'] > 0, "$done/$total");
-                $this->assertSame($done < $total, $percentages['done'] < 100, "$done/$total");
+                $ok = array_sum($percentages) === 100
+                    && ($done > 0) === ($percentages['done'] > 0)
+                    && ($done < $total) === ($percentages['done'] < 100);
+                if (!$ok) {
+                    $failures[] = "$done/$total";
+                }
             }
         }
+        $this->assertSame([], $failures);
         $this->assertSame(['done' => 1, 'todo' => 99], participation::percentages(1, 300));
         $this->assertSame(['done' => 99, 'todo' => 1], participation::percentages(299, 300));
         $this->assertSame(['done' => 0, 'todo' => 0], participation::percentages(0, 0));
