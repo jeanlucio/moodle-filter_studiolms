@@ -1,0 +1,46 @@
+{{!
+    This file is part of Moodle - https://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+}}
+{{!
+    @template filter_studiolms/bar
+
+    Participation bar drawn in place of the [FORUMSTATS] marker.
+
+    Only div, span, ul and li with classes, and a percentage width, so it survives the HTML cleaner.
+
+    Example context (json):
+    {
+        "title": "Participation in this forum",
+        "segments": [
+            {"key": "replied", "label": "Replied", "percent": 50, "width": "50.00", "hasbar": true, "counttext": "5 of 10"},
+            {"key": "startedonly", "label": "Only started a topic", "percent": 20, "width": "20.00", "hasbar": true, "counttext": ""},
+            {"key": "notparticipated", "label": "Not yet participated", "percent": 30, "width": "30.00", "hasbar": true, "counttext": ""}
+        ],
+        "notice": ""
+    }
+}}
+<div class="slw-bar">
+    <div class="slw-bar-title">{{title}}</div>
+    <div class="slw-bar-track">{{#segments}}{{#hasbar}}<div class="slw-bar-segment slw-bar-{{key}}" style="width: {{width}}%"></div>{{/hasbar}}{{/segments}}</div>
+    <ul class="slw-bar-legend">
+        {{#segments}}
+        <li class="slw-bar-item"><span class="slw-bar-dot slw-bar-{{key}}"></span><span class="slw-bar-label">{{label}}</span> <span class="slw-bar-value">{{percent}}%{{#counttext}} ({{counttext}}){{/counttext}}</span></li>
+        {{/segments}}
+    </ul>
+    {{#notice}}
+    <div class="slw-bar-notice">{{notice}}</div>
+    {{/notice}}
+</div>

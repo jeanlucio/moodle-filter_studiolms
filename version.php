@@ -25,7 +25,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'filter_studiolms';
-$plugin->version   = 2026102800;        // The current plugin version (Date: YYYYMMDDXX).
+$plugin->version   = 2026102802;        // The current plugin version (Date: YYYYMMDDXX).
 $plugin->requires  = 2024100700;        // Requires Moodle 4.5+.
 $plugin->supported = [405, 503];
 $plugin->maturity  = MATURITY_ALPHA;

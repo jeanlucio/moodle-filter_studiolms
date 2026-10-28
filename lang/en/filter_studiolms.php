@@ -25,5 +25,20 @@
 defined('MOODLE_INTERNAL') || die();
 // phpcs:disable moodle.Files.LineLength
 
+$string['cachedef_participation'] = 'Participation counts of forums';
+$string['count_of'] = '{$a->count} of {$a->total}';
+$string['enable_forumstats'] = 'Forum statistics widget';
+$string['enable_forumstats_desc'] = 'Replace [FORUMSTATS] in the description of a forum with a bar showing how much of the class has taken part.';
+$string['filtername'] = 'StudioLMS widgets';
+$string['formhelp'] = 'Write [FORUMSTATS] in the description to show how much of the class has taken part in this forum.';
+$string['formhelpinactive'] = 'The StudioLMS widgets filter is not active in this course, so the marker will show as plain text. Turn it on under Filters.';
+$string['formlabel'] = 'Class participation';
+$string['hiddenforstudents'] = 'Hidden from students: the class has fewer than {$a} students.';
+$string['minclasssize'] = 'Minimum class size';
+$string['minclasssize_desc'] = 'Below this number of students the bar is hidden from students, so nobody can be identified.';
+$string['notparticipated'] = 'Not yet participated';
+$string['participation'] = 'Participation in this forum';
 $string['pluginname'] = 'StudioLMS widgets';
-$string['privacy:metadata'] = 'The StudioLMS widgets plugin does not store any personal data.';
+$string['privacy:metadata'] = 'The StudioLMS widgets filter does not store any personal data.';
+$string['replied'] = 'Replied';
+$string['startedonly'] = 'Only started a topic';

@@ -15,27 +15,27 @@
 // along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
 /**
- * Tests for the filter_studiolms text filter.
+ * Admin settings of filter_studiolms.
  *
  * @package    filter_studiolms
- * @category   test
  * @copyright  2026 Jean Lúcio
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-namespace filter_studiolms;
+defined('MOODLE_INTERNAL') || die();
 
-/**
- * Tests for filter_studiolms\text_filter.
- *
- * @covers \filter_studiolms\text_filter
- */
-final class text_filter_test extends \advanced_testcase {
-    public function test_filter_leaves_plain_text_untouched(): void {
-        $this->resetAfterTest();
-
-        $filter = new text_filter(\context_system::instance(), []);
-
-        $this->assertSame('<p>Hello</p>', $filter->filter('<p>Hello</p>'));
-    }
+if ($ADMIN->fulltree) {
+    $settings->add(new admin_setting_configcheckbox(
+        'filter_studiolms/enable_forumstats',
+        new lang_string('enable_forumstats', 'filter_studiolms'),
+        new lang_string('enable_forumstats_desc', 'filter_studiolms'),
+        1
+    ));
+    $settings->add(new admin_setting_configtext(
+        'filter_studiolms/minclasssize',
+        new lang_string('minclasssize', 'filter_studiolms'),
+        new lang_string('minclasssize_desc', 'filter_studiolms'),
+        5,
+        PARAM_INT
+    ));
 }
