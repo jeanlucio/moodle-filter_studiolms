@@ -180,7 +180,7 @@ class course_sections {
             return '';
         }
         $address = $url->out(false);
-        $wholepage = $url->get_path() === '/course/view.php' && $url->get_param('section') === null
+        $wholepage = str_ends_with($url->get_path(), '/course/view.php') && $url->get_param('section') === null
             && strpos($address, '#') === false;
         if ($wholepage) {
             $url->set_anchor('section-' . $section->section);

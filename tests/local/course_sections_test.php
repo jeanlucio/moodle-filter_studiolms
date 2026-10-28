@@ -81,7 +81,10 @@ final class course_sections_test extends \advanced_testcase {
      * @return void
      */
     public function test_single_page_course_gives_each_step_its_own_anchor(): void {
+        global $CFG;
         $this->resetAfterTest();
+        // A site installed in a folder, as the one of the CI, so the path of the address does not start at the course.
+        $CFG->wwwroot .= '/moodle';
         $setup = $this->make_course(3, ['coursedisplay' => COURSE_DISPLAY_SINGLEPAGE]);
         $this->setUser($setup['student']);
 
