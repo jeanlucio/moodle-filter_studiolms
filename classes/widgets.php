@@ -24,7 +24,9 @@
 
 namespace filter_studiolms;
 
+use filter_studiolms\widget\coursemap;
 use filter_studiolms\widget\forumstats;
+use filter_studiolms\widget\quizinfo;
 use filter_studiolms\widget\widget;
 
 /**
@@ -40,7 +42,7 @@ class widgets {
      * @return widget[] The widgets indexed by marker name.
      */
     public static function all(): array {
-        $widgets = [new forumstats()];
+        $widgets = [new forumstats(), new coursemap(), new quizinfo()];
         $bymarker = [];
         foreach ($widgets as $widget) {
             $bymarker[$widget->get_marker()] = $widget;

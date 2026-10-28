@@ -1,0 +1,50 @@
+{{!
+    This file is part of Moodle - https://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+}}
+{{!
+    @template filter_studiolms/map
+
+    Course map drawn in place of the [COURSEMAP] marker.
+
+    Only div, span and a with classes, so it survives the HTML cleaner.
+
+    Example context (json):
+    {
+        "title": "Course map",
+        "layout": "steps",
+        "rows": [
+            {"steps": [
+                {"number": 1, "name": "Welcome", "url": "https://example.com/course/view.php?id=2#section-1", "state": "done", "statetext": "Done", "isdone": true},
+                {"number": 2, "name": "Foundations", "url": "https://example.com/course/view.php?id=2#section-2", "state": "current", "statetext": "Current step", "isdone": false},
+                {"number": 3, "name": "Practice", "url": "https://example.com/course/view.php?id=2#section-3", "state": "todo", "statetext": "", "isdone": false}
+            ]}
+        ]
+    }
+}}
+<div class="slw-map slw-map-{{layout}}">
+    <div class="slw-map-title">{{title}}</div>
+    {{#rows}}
+    <div class="slw-map-row">
+        {{#steps}}
+        <div class="slw-map-step slw-map-{{state}}">
+            <span class="slw-map-number">{{#isdone}}&#10003;{{/isdone}}{{^isdone}}{{number}}{{/isdone}}</span>
+            {{#url}}<a class="slw-map-name" href="{{url}}">{{name}}</a>{{/url}}{{^url}}<span class="slw-map-name">{{name}}</span>{{/url}}
+            {{#statetext}}<span class="slw-map-state">{{statetext}}</span>{{/statetext}}
+        </div>
+        {{/steps}}
+    </div>
+    {{/rows}}
+</div>

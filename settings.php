@@ -31,6 +31,18 @@ if ($ADMIN->fulltree) {
         new lang_string('enable_forumstats_desc', 'filter_studiolms'),
         1
     ));
+    $settings->add(new admin_setting_configcheckbox(
+        'filter_studiolms/enable_coursemap',
+        new lang_string('enable_coursemap', 'filter_studiolms'),
+        new lang_string('enable_coursemap_desc', 'filter_studiolms'),
+        1
+    ));
+    $settings->add(new admin_setting_configcheckbox(
+        'filter_studiolms/enable_quizinfo',
+        new lang_string('enable_quizinfo', 'filter_studiolms'),
+        new lang_string('enable_quizinfo_desc', 'filter_studiolms'),
+        1
+    ));
     $settings->add(new admin_setting_configtext(
         'filter_studiolms/minclasssize',
         new lang_string('minclasssize', 'filter_studiolms'),

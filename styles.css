@@ -94,3 +94,130 @@ div.slw-form-help .slw-form-warning {
     margin-block-start: 0.25rem;
     font-weight: 600;
 }
+
+div.slw-map {
+    margin-block: 1rem;
+}
+
+div.slw-map .slw-map-title,
+div.slw-quiz .slw-quiz-title {
+    font-weight: 600;
+    margin-block-end: 0.5rem;
+}
+
+div.slw-map .slw-map-row {
+    display: flex;
+    flex-wrap: wrap;
+    margin-block-end: 0.75rem;
+}
+
+div.slw-map .slw-map-step {
+    position: relative;
+    display: flex;
+    flex: 1 1 8rem;
+    flex-direction: column;
+    align-items: center;
+    min-inline-size: 6rem;
+    padding: 1.5rem 0.5rem 0.25rem;
+    border-block-start: 2px solid var(--bs-gray-400, #ced4da);
+    text-align: center;
+}
+
+div.slw-map .slw-map-number {
+    position: absolute;
+    inset-block-start: -1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: 2rem;
+    block-size: 2rem;
+    border: 2px solid var(--bs-gray-600, #6c757d);
+    border-radius: 50%;
+    background-color: var(--bs-body-bg, #fff);
+    font-weight: 600;
+}
+
+div.slw-map .slw-map-done {
+    border-block-start-color: var(--bs-success, #198754);
+}
+
+div.slw-map .slw-map-done .slw-map-number {
+    border-color: var(--bs-success, #198754);
+    background-color: var(--bs-success, #198754);
+    color: var(--bs-white, #fff);
+}
+
+div.slw-map .slw-map-current {
+    border-block-start-color: var(--bs-primary, #0f6cbf);
+}
+
+div.slw-map .slw-map-current .slw-map-number {
+    border-color: var(--bs-primary, #0f6cbf);
+    box-shadow: 0 0 0 4px var(--bs-primary-bg-subtle, #cfe2ff);
+}
+
+div.slw-map .slw-map-todo .slw-map-number {
+    border-color: var(--bs-gray-400, #ced4da);
+}
+
+div.slw-map .slw-map-state {
+    margin-block-start: 0.125rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+div.slw-map .slw-map-name {
+    overflow-wrap: break-word;
+}
+
+div.slw-map-tiles .slw-map-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(8rem, 1fr));
+    gap: 0.5rem;
+}
+
+div.slw-map-tiles .slw-map-step {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    border: 1px solid var(--bs-gray-400, #ced4da);
+    border-radius: 0.5rem;
+    text-align: start;
+}
+
+div.slw-map-tiles .slw-map-number {
+    position: static;
+    flex: none;
+    inline-size: 1.75rem;
+    block-size: 1.75rem;
+}
+
+div.slw-quiz {
+    margin-block: 1rem;
+}
+
+div.slw-quiz .slw-quiz-cards {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+div.slw-quiz .slw-quiz-card {
+    display: flex;
+    flex: 1 1 8rem;
+    flex-direction: column;
+    max-inline-size: 14rem;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--bs-gray-400, #ced4da);
+    border-radius: 0.5rem;
+    background-color: var(--bs-body-bg, #fff);
+    text-align: center;
+}
+
+div.slw-quiz .slw-quiz-value {
+    font-size: 1.25rem;
+    font-weight: 700;
+}
+

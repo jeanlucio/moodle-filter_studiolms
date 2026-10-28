@@ -27,6 +27,8 @@ namespace filter_studiolms;
 
 defined('MOODLE_INTERNAL') || die();
 
+global $CFG;
+require_once($CFG->dirroot . '/course/lib.php');
 require_once(__DIR__ . '/fixtures/forum_course_trait.php');
 
 /**
@@ -37,6 +39,8 @@ require_once(__DIR__ . '/fixtures/forum_course_trait.php');
  * @covers \filter_studiolms\widget\forumstats
  * @covers \filter_studiolms\output\bar
  * @covers \filter_studiolms\local\marker_options
+ * @covers \filter_studiolms\widget\coursemap
+ * @covers \filter_studiolms\widget\quizinfo
  */
 final class filter_test extends \advanced_testcase {
     use forum_course_trait;
@@ -151,9 +155,9 @@ final class filter_test extends \advanced_testcase {
 
         set_config('enable_forumstats', 0, 'filter_studiolms');
         $this->assertSame('<p>A  B</p>', $forumfilter->filter($text));
-        $this->assertSame([], widgets::enabled());
+        $this->assertSame(['coursemap', 'quizinfo'], widgets::enabled());
         set_config('enable_forumstats', 1, 'filter_studiolms');
-        $this->assertSame(['forumstats'], widgets::enabled());
+        $this->assertSame(['forumstats', 'coursemap', 'quizinfo'], widgets::enabled());
 
         $this->setGuestUser();
         $this->assertSame('<p>A  B</p>', $forumfilter->filter($text));
@@ -246,6 +250,125 @@ final class filter_test extends \advanced_testcase {
         $this->assertStringContainsString('Participated', $html);
         $this->assertStringContainsString('2 of 10', $html);
         $this->assertStringContainsString(get_string('barnote', 'filter_studiolms'), $html);
+    }
+
+    /**
+     * The course map in a page of the course: one step per visible section, and a hidden one does not leak to students.
+     *
+     * @return void
+     */
+    public function test_course_map_shows_the_sections_the_viewer_sees(): void {
+        $this->resetAfterTest();
+        $generator = $this->getDataGenerator();
+        $course = $generator->create_course(['numsections' => 4, 'format' => 'topics']);
+        $student = $generator->create_user();
+        $teacher = $generator->create_user();
+        $generator->enrol_user($student->id, $course->id, 'student');
+        $generator->enrol_user($teacher->id, $course->id, 'editingteacher');
+        $info = get_fast_modinfo($course);
+        course_update_section($course, $info->get_section_info(2), ['name' => 'Secret & hidden']);
+        course_update_section($course, $info->get_section_info(1), ['name' => 'A & B > 3']);
+        set_section_visible($course->id, 2, 0);
+        course_set_marker($course->id, 3);
+        $page = $generator->create_module('page', ['course' => $course->id]);
+        $filter = $this->make_filter(\context_module::instance($page->cmid));
+
+        $this->setUser($student);
+        $html = $filter->filter('<p><span class="slms-widget-marker">[COURSEMAP]</span></p>');
+        $this->assertStringNotContainsString('slms-widget-marker', $html);
+        $this->assertSame(3, substr_count($html, 'slw-map-step slw-map-'));
+        $this->assertStringNotContainsString('Secret', $html);
+        $this->assertStringContainsString('A &amp; B &gt; 3', $html);
+        $this->assertStringNotContainsString('&amp;amp;', $html);
+        $this->assertStringContainsString('slw-map-current', $html);
+        $this->assertStringContainsString('Current step', $html);
+        $this->assertStringContainsString('Done', $html);
+
+        $this->setUser($teacher);
+        $teacherhtml = $filter->filter('[COURSEMAP]');
+        $this->assertSame(4, substr_count($teacherhtml, 'slw-map-step slw-map-'));
+        $this->assertStringContainsString('Secret &amp; hidden', $teacherhtml);
+
+        $tiles = $filter->filter('[COURSEMAP style=tiles]');
+        $this->assertStringContainsString('slw-map-tiles', $tiles);
+        $this->assertStringContainsString('slw-map-steps', $filter->filter('[COURSEMAP style=bogus]'));
+    }
+
+    /**
+     * The course map survives the HTML cleaner, with its links, and is removed outside a course.
+     *
+     * @return void
+     */
+    public function test_course_map_survives_the_cleaner_and_needs_a_course(): void {
+        $this->resetAfterTest();
+        $generator = $this->getDataGenerator();
+        $course = $generator->create_course(['numsections' => 3, 'format' => 'topics']);
+        $student = $generator->create_user();
+        $generator->enrol_user($student->id, $course->id, 'student');
+        course_set_marker($course->id, 2);
+        $this->setUser($student);
+
+        $html = $this->make_filter(\context_course::instance($course->id))->filter('[COURSEMAP]');
+        $cleaned = clean_text($html, FORMAT_HTML);
+
+        foreach (['slw-map-row', 'slw-map-done', 'slw-map-current', 'slw-map-todo', 'slw-map-state', 'href="'] as $needle) {
+            $this->assertStringContainsString($needle, $cleaned, $needle);
+        }
+        $this->assertSame(substr_count($html, 'slw-map-step'), substr_count($cleaned, 'slw-map-step'));
+        $this->assertDoesNotMatchRegularExpression('/<svg|data-|aria-|role=/', $html);
+
+        $this->assertSame('', $this->make_filter(\context_system::instance())->filter('[COURSEMAP]'));
+        $this->assertSame('', $this->make_filter(\context_course::instance(SITEID))->filter('[COURSEMAP]'));
+        set_config('enable_coursemap', 0, 'filter_studiolms');
+        $this->assertSame('', $this->make_filter(\context_course::instance($course->id))->filter('[COURSEMAP]'));
+    }
+
+    /**
+     * The quiz rules in the description of a quiz: real numbers, the student's own override, and nothing elsewhere.
+     *
+     * @return void
+     */
+    public function test_quiz_rules_show_the_numbers_of_the_viewer(): void {
+        $this->resetAfterTest();
+        $generator = $this->getDataGenerator();
+        $course = $generator->create_course();
+        $student = $generator->create_user();
+        $colleague = $generator->create_user();
+        $generator->enrol_user($student->id, $course->id, 'student');
+        $generator->enrol_user($colleague->id, $course->id, 'student');
+        $quiz = $generator->create_module('quiz', ['course' => $course->id, 'attempts' => 0, 'timelimit' => 0]);
+        $generator->get_plugin_generator('mod_quiz')->create_override([
+            'quiz' => $quiz->id,
+            'userid' => $student->id,
+            'attempts' => 4,
+            'timelimit' => 30 * MINSECS,
+        ]);
+        $filter = $this->make_filter(\context_module::instance($quiz->cmid));
+
+        $this->setUser($colleague);
+        $plain = $filter->filter('<p><span class="slms-widget-marker">[QUIZINFO]</span></p>');
+        $this->assertStringNotContainsString('slms-widget-marker', $plain);
+        $this->assertStringContainsString('slw-quiz', $plain);
+        $this->assertStringContainsString('Unlimited', $plain);
+        $this->assertStringContainsString('No limit', $plain);
+
+        $this->setUser($student);
+        $own = $filter->filter('[QUIZINFO]');
+        $this->assertStringContainsString('>4<', $own);
+        $this->assertStringContainsString(format_time(30 * MINSECS), $own);
+        $this->assertStringNotContainsString('Unlimited', $own);
+
+        $cleaned = clean_text($own, FORMAT_HTML);
+        $this->assertSame(substr_count($own, 'slw-quiz-card'), substr_count($cleaned, 'slw-quiz-card'));
+        $this->assertDoesNotMatchRegularExpression('/<svg|data-|aria-|role=/', $own);
+
+        // Anywhere but a quiz, or with the widget off, the marker is removed.
+        $page = $generator->create_module('page', ['course' => $course->id]);
+        $this->assertSame('', $this->make_filter(\context_module::instance($page->cmid))->filter('[QUIZINFO]'));
+        $this->assertSame('', $this->make_filter(\context_course::instance($course->id))->filter('[QUIZINFO]'));
+        set_config('enable_quizinfo', 0, 'filter_studiolms');
+        $this->assertSame('', $filter->filter('[QUIZINFO]'));
+        $this->assertSame(['forumstats', 'coursemap'], widgets::enabled());
     }
 
     /**
