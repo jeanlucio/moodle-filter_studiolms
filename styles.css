@@ -90,10 +90,6 @@ div.slw-bar .slw-bar-notice {
     font-style: italic;
 }
 
-div.slw-form-help .slw-form-warning {
-    margin-block-start: 0.25rem;
-    font-weight: 600;
-}
 
 div.slw-map {
     margin-block: 1rem;
@@ -272,4 +268,3 @@ div.slw-quiz .slw-quiz-value {
     font-size: 1.25rem;
     font-weight: 700;
 }
-
