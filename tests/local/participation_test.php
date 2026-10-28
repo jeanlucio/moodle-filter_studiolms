@@ -40,15 +40,6 @@ final class participation_test extends \advanced_testcase {
     use forum_course_trait;
 
     /**
-     * The measure of a forum with no completion rule: any message counts.
-     *
-     * @return array
-     */
-    private function anymeasure(): array {
-        return ['kind' => 'posts', 'posts' => 1, 'discussions' => 0, 'replies' => 0];
-    }
-
-    /**
      * Ten students: five reply, two only open a topic (one more opens a topic and also replies), three do nothing.
      * The teacher posts and replies, and is not counted.
      *
@@ -71,83 +62,41 @@ final class participation_test extends \advanced_testcase {
     }
 
     /**
-     * With no rule, seven of ten took part (five replied, two only opened a topic); teachers who post do not count.
+     * Seven of ten took part (five replied, two only opened a topic); teachers who post do not count.
      *
      * @return void
      */
-    public function test_any_message_counts_when_the_forum_has_no_rule(): void {
+    public function test_one_message_of_any_kind_counts(): void {
         $this->resetAfterTest();
         $setup = $this->make_class();
         $context = \context_module::instance($setup['cm']->id);
 
-        $counts = participation::calculate((int) $setup['forum']->id, $context, null, $this->anymeasure());
+        $counts = participation::calculate((int) $setup['forum']->id, $context, null);
 
         $this->assertSame(['total' => 10, 'done' => 7], $counts);
         $this->assertSame(['done' => 70, 'todo' => 30], participation::percentages(7, 10));
     }
 
     /**
-     * The measure comes from the rules of the completion of the activity, and only when it is automatic.
+     * The completion rules of the forum do not change what is counted: one message is enough.
      *
      * @return void
      */
-    public function test_measure_follows_the_completion_rules(): void {
+    public function test_completion_rules_do_not_change_the_count(): void {
         global $CFG;
         $this->resetAfterTest();
         $CFG->enablecompletion = true;
-        $course = ['enablecompletion' => 1];
-        $cases = [
-            [['completionreplies' => 1], ['kind' => 'replies', 'posts' => 0, 'discussions' => 0, 'replies' => 1]],
-            [['completiondiscussions' => 2], ['kind' => 'discussions', 'posts' => 0, 'discussions' => 2, 'replies' => 0]],
-            [['completionposts' => 3], ['kind' => 'posts', 'posts' => 3, 'discussions' => 0, 'replies' => 0]],
-            [
-                ['completionreplies' => 1, 'completiondiscussions' => 1],
-                ['kind' => 'posts', 'posts' => 0, 'discussions' => 1, 'replies' => 1],
-            ],
-            [[], $this->anymeasure()],
-        ];
-        foreach ($cases as [$rules, $expected]) {
-            $setup = $this->make_forum_course(1, ['completion' => COMPLETION_TRACKING_AUTOMATIC] + $rules, $course);
-            $cm = get_fast_modinfo($setup['course']->id)->get_cm($setup['cm']->id);
-            $this->assertSame($expected, participation::get_measure($cm), json_encode($rules));
-        }
-
-        // Rules left on a forum whose completion is manual are ignored, as the completion itself ignores them.
-        $manual = $this->make_forum_course(1, ['completion' => COMPLETION_TRACKING_MANUAL, 'completionreplies' => 1], $course);
-        $cm = get_fast_modinfo($manual['course']->id)->get_cm($manual['cm']->id);
-        $this->assertSame($this->anymeasure(), participation::get_measure($cm));
-
-        // With completion switched off in the site, the rules are not in force either.
-        $active = $this->make_forum_course(1, ['completion' => COMPLETION_TRACKING_AUTOMATIC, 'completionreplies' => 1], $course);
-        $CFG->enablecompletion = false;
-        $cm = get_fast_modinfo($active['course']->id)->get_cm($active['cm']->id);
-        $this->assertSame($this->anymeasure(), participation::get_measure($cm));
-    }
-
-    /**
-     * Each kind of rule counts what it asks, with its minimum, and every ticked rule has to be met.
-     *
-     * @return void
-     */
-    public function test_each_rule_counts_what_it_asks(): void {
-        $this->resetAfterTest();
-        $setup = $this->make_class();
+        $setup = $this->make_forum_course(
+            3,
+            ['completion' => COMPLETION_TRACKING_AUTOMATIC, 'completionreplies' => 3, 'completiondiscussions' => 2],
+            ['enablecompletion' => 1]
+        );
         $context = \context_module::instance($setup['cm']->id);
-        $forumid = (int) $setup['forum']->id;
-        $measure = fn(int $posts, int $discussions, int $replies): array => [
-            'kind' => 'posts', 'posts' => $posts, 'discussions' => $discussions, 'replies' => $replies,
-        ];
+        $this->start_discussion($setup, $setup['students'][0]);
 
-        // Replies: the five who replied.
-        $this->assertSame(5, participation::calculate($forumid, $context, null, $measure(0, 0, 1))['done']);
-        // Discussions: the two who only opened one and the one who also replied.
-        $this->assertSame(3, participation::calculate($forumid, $context, null, $measure(0, 1, 0))['done']);
-        // Two messages at least: the student who opened a topic and replied.
-        $this->assertSame(1, participation::calculate($forumid, $context, null, $measure(2, 0, 0))['done']);
-        // A topic and a reply: only that same student.
-        $this->assertSame(1, participation::calculate($forumid, $context, null, $measure(0, 1, 1))['done']);
-        // Two replies: nobody.
-        $this->assertSame(0, participation::calculate($forumid, $context, null, $measure(0, 0, 2))['done']);
+        $counts = participation::calculate((int) $setup['forum']->id, $context, null);
+
+        $this->assertSame(['total' => 3, 'done' => 1], $counts);
     }
 
     /**
@@ -179,7 +128,7 @@ final class participation_test extends \advanced_testcase {
         $forumrecord = $setup['forum'];
         forum_delete_post($deleted, true, $setup['course'], $setup['cm'], $forumrecord);
 
-        $counts = participation::calculate((int) $setup['forum']->id, $context, null, $this->anymeasure());
+        $counts = participation::calculate((int) $setup['forum']->id, $context, null);
 
         $this->assertSame(['total' => 3, 'done' => 1], $counts);
     }
@@ -206,11 +155,11 @@ final class participation_test extends \advanced_testcase {
         $this->reply_to($this->start_discussion($second, $second['teacher']), $second['students'][0]);
 
         $context = \context_module::instance($first['cm']->id);
-        $counts = participation::calculate((int) $first['forum']->id, $context, null, $this->anymeasure());
+        $counts = participation::calculate((int) $first['forum']->id, $context, null);
         $this->assertSame(['total' => 3, 'done' => 0], $counts);
 
         $secondcontext = \context_module::instance($second['cm']->id);
-        $secondcounts = participation::calculate((int) $second['forum']->id, $secondcontext, null, $this->anymeasure());
+        $secondcounts = participation::calculate((int) $second['forum']->id, $secondcontext, null);
         $this->assertSame(['total' => 3, 'done' => 1], $secondcounts);
     }
 
@@ -256,14 +205,14 @@ final class participation_test extends \advanced_testcase {
         $this->assertSame([(int) $groupa->id], $restriction);
         $this->assertSame(
             ['total' => 2, 'done' => 1],
-            participation::get_counts($forumid, $context, $restriction, $this->anymeasure())
+            participation::get_counts($forumid, $context, $restriction)
         );
 
         $this->setUser($setup['teacher']);
         $this->assertNull(participation::get_group_restriction($cm, $context));
         $this->assertSame(
             ['total' => 4, 'done' => 3],
-            participation::get_counts($forumid, $context, null, $this->anymeasure())
+            participation::get_counts($forumid, $context, null)
         );
     }
 
@@ -284,7 +233,7 @@ final class participation_test extends \advanced_testcase {
         $this->assertSame([], $restriction);
         $this->assertSame(
             ['total' => 0, 'done' => 0],
-            participation::get_counts((int) $setup['forum']->id, $context, $restriction, $this->anymeasure())
+            participation::get_counts((int) $setup['forum']->id, $context, $restriction)
         );
     }
 
@@ -308,8 +257,7 @@ final class participation_test extends \advanced_testcase {
     }
 
     /**
-     * The counts are kept for a while, an event or an explicit call makes them fresh, and a change of rule does not
-     * reuse counts made for another one.
+     * The counts are kept for a while, and an event or an explicit call makes them fresh.
      *
      * @return void
      */
@@ -319,9 +267,8 @@ final class participation_test extends \advanced_testcase {
         $context = \context_module::instance($setup['cm']->id);
         $forumid = (int) $setup['forum']->id;
         $discussion = $this->start_discussion($setup, $setup['teacher']);
-        $measure = $this->anymeasure();
 
-        $this->assertSame(0, participation::get_counts($forumid, $context, null, $measure)['done']);
+        $this->assertSame(0, participation::get_counts($forumid, $context, null)['done']);
 
         // A reply written straight to the table triggers no event, so the cached counts stay as they were.
         $this->getDataGenerator()->get_plugin_generator('mod_forum')->create_post([
@@ -329,14 +276,10 @@ final class participation_test extends \advanced_testcase {
             'parent' => $discussion->firstpost,
             'userid' => $setup['students'][0]->id,
         ]);
-        $this->assertSame(0, participation::get_counts($forumid, $context, null, $measure)['done']);
-
-        // Another rule is another measure: it is not answered from the counts of the first.
-        $replies = ['kind' => 'replies', 'posts' => 0, 'discussions' => 0, 'replies' => 1];
-        $this->assertSame(1, participation::get_counts($forumid, $context, null, $replies)['done']);
+        $this->assertSame(0, participation::get_counts($forumid, $context, null)['done']);
 
         participation::invalidate($forumid);
-        $this->assertSame(1, participation::get_counts($forumid, $context, null, $measure)['done']);
+        $this->assertSame(1, participation::get_counts($forumid, $context, null)['done']);
     }
 
     /**

@@ -56,8 +56,7 @@ class forumstats implements widget {
         }
 
         $groupids = participation::get_group_restriction($cm, $context);
-        $measure = participation::get_measure($cm);
-        $counts = participation::get_counts((int) $cm->instance, $context, $groupids, $measure);
+        $counts = participation::get_counts((int) $cm->instance, $context, $groupids);
         if ($counts['total'] === 0) {
             return '';
         }
@@ -71,7 +70,7 @@ class forumstats implements widget {
 
         return $OUTPUT->render_from_template(
             'filter_studiolms/bar',
-            bar::export_context($counts, $measure['kind'], $hidden ? $minimum : 0)
+            bar::export_context($counts, $hidden ? $minimum : 0)
         );
     }
 

@@ -33,21 +33,21 @@ class bar {
     /**
      * Exports the context of the template.
      *
-     * @param int[] $counts The keys total and done.
-     * @param string $kind What the bar measures: posts, discussions or replies, which picks the labels.
+     * @param int[] $counts The keys total (the whole population) and done (those with at least one message).
      * @param int $hiddenbelow When above 0, the minimum class size that hides the bar from students.
      * @return array
      */
-    public static function export_context(array $counts, string $kind, int $hiddenbelow = 0): array {
+    public static function export_context(array $counts, int $hiddenbelow = 0): array {
         $total = $counts['total'];
         $numbers = ['done' => $counts['done'], 'todo' => max(0, $total - $counts['done'])];
+        $labels = ['done' => 'participated', 'todo' => 'notparticipated'];
         $percentages = participation::percentages($counts['done'], $total);
 
         $segments = [];
         foreach ($numbers as $key => $count) {
             $segments[] = [
                 'key' => $key,
-                'label' => get_string("measure_{$kind}_{$key}", 'filter_studiolms'),
+                'label' => get_string($labels[$key], 'filter_studiolms'),
                 'percent' => $percentages[$key],
                 'width' => number_format($count * 100 / $total, 2, '.', ''),
                 'hasbar' => $count > 0,
@@ -58,6 +58,7 @@ class bar {
         return [
             'title' => get_string('participation', 'filter_studiolms'),
             'segments' => $segments,
+            'note' => get_string('barnote', 'filter_studiolms'),
             'notice' => $hiddenbelow > 0 ? get_string('hiddenforstudents', 'filter_studiolms', $hiddenbelow) : '',
         ];
     }

@@ -61,65 +61,26 @@ class participation {
     }
 
     /**
-     * Works out what the bar measures for a forum: the rules of its activity completion, when it has any.
-     *
-     * Every rule the teacher ticked must be met, as in the completion of the activity, and "at least" the number the rule
-     * asks for. A forum with no rule (or with completion that is not automatic) measures any message, topic or reply.
-     * The rules only choose what to count: the widget does not read, give or change anyone's completion.
-     *
-     * @param \cm_info $cm The forum.
-     * @return array The keys kind (posts, discussions or replies, which picks the labels), and the minimums
-     *               posts, discussions and replies, 0 for a rule that is not used.
-     */
-    public static function get_measure(\cm_info $cm): array {
-        global $CFG;
-        require_once($CFG->libdir . '/completionlib.php');
-
-        $rules = [];
-        $tracking = (new \completion_info($cm->get_course()))->is_enabled($cm);
-        if ($tracking == COMPLETION_TRACKING_AUTOMATIC) {
-            $rules = $cm->customdata['customcompletionrules'] ?? [];
-        }
-        $discussions = max(0, (int) ($rules['completiondiscussions'] ?? 0));
-        $replies = max(0, (int) ($rules['completionreplies'] ?? 0));
-        $posts = max(0, (int) ($rules['completionposts'] ?? 0));
-        if ($discussions === 0 && $replies === 0 && $posts === 0) {
-            $posts = 1;
-        }
-
-        $kind = 'posts';
-        if ($posts === 0 && $replies === 0) {
-            $kind = 'discussions';
-        } else if ($posts === 0 && $discussions === 0) {
-            $kind = 'replies';
-        }
-        return ['kind' => $kind, 'posts' => $posts, 'discussions' => $discussions, 'replies' => $replies];
-    }
-
-    /**
      * Returns the counts of the forum for a set of groups, from the cache when it is fresh.
      *
      * @param int $forumid The forum id.
      * @param \context $context The context of the forum.
      * @param int[]|null $groupids Null for the whole class.
-     * @param array $measure What to count, from get_measure().
-     * @return int[] The keys total (the whole population) and done (those who did what the measure asks).
+     * @return int[] The keys total (the whole population) and done (those with at least one message).
      */
-    public static function get_counts(int $forumid, \context $context, ?array $groupids, array $measure): array {
+    public static function get_counts(int $forumid, \context $context, ?array $groupids): array {
         if ($groupids !== null && $groupids === []) {
             return ['total' => 0, 'done' => 0];
         }
 
         $cache = \cache::make('filter_studiolms', 'participation');
-        // The rules may change while a forum is cached, so they are part of the key.
-        $key = ($groupids === null ? 'all' : implode(',', $groupids))
-            . ':' . $measure['posts'] . '-' . $measure['discussions'] . '-' . $measure['replies'];
+        $key = $groupids === null ? 'all' : implode(',', $groupids);
         $entry = $cache->get($forumid);
         if (is_array($entry) && isset($entry[$key])) {
             return $entry[$key];
         }
 
-        $counts = self::calculate($forumid, $context, $groupids, $measure);
+        $counts = self::calculate($forumid, $context, $groupids);
         $entry = is_array($entry) ? $entry : [];
         $entry[$key] = $counts;
         $cache->set($forumid, $entry);
@@ -136,7 +97,7 @@ class participation {
     }
 
     /**
-     * Counts the whole population and those who did what the measure asks, in one query.
+     * Counts the whole population and those who sent at least one message, in one query.
      *
      * The population is the active students (holders of moodle/course:isincompletionreports, the capability that
      * marks the student role) who can post in the forum. Teachers who post are left out because they are not in it.
@@ -145,10 +106,9 @@ class participation {
      * @param int $forumid The forum id.
      * @param \context $context The context of the forum.
      * @param int[]|null $groupids Null for the whole class.
-     * @param array $measure What to count, from get_measure().
      * @return int[] The keys total and done.
      */
-    public static function calculate(int $forumid, \context $context, ?array $groupids, array $measure): array {
+    public static function calculate(int $forumid, \context $context, ?array $groupids): array {
         global $DB;
 
         [$studentsql, $studentparams] = get_enrolled_sql(
@@ -160,26 +120,14 @@ class participation {
         [$postersql, $posterparams] = get_enrolled_sql($context, 'mod/forum:replypost', 0, true);
 
         $sql = "SELECT COUNT(u.id) AS total,
-                       COALESCE(SUM(CASE WHEN COALESCE(a.topics, 0) >= :mindiscussions
-                                          AND COALESCE(a.replies, 0) >= :minreplies
-                                          AND COALESCE(a.posts, 0) >= :minposts THEN 1 ELSE 0 END), 0) AS done
+                       COALESCE(SUM(CASE WHEN a.userid IS NOT NULL THEN 1 ELSE 0 END), 0) AS done
                   FROM {user} u
-             LEFT JOIN (SELECT p.userid,
-                               SUM(CASE WHEN p.parent <> 0 THEN 1 ELSE 0 END) AS replies,
-                               SUM(CASE WHEN p.parent = 0 THEN 1 ELSE 0 END) AS topics,
-                               COUNT(p.id) AS posts
+             LEFT JOIN (SELECT DISTINCT p.userid
                           FROM {forum_posts} p
                           JOIN {forum_discussions} d ON d.id = p.discussion
-                         WHERE d.forum = :forumid AND p.deleted = 0 AND p.privatereplyto = 0
-                      GROUP BY p.userid) a ON a.userid = u.id
+                         WHERE d.forum = :forumid AND p.deleted = 0 AND p.privatereplyto = 0) a ON a.userid = u.id
                  WHERE u.id IN ($studentsql) AND u.id IN ($postersql)";
-        $params = [
-            'forumid' => $forumid,
-            'mindiscussions' => $measure['discussions'],
-            'minreplies' => $measure['replies'],
-            'minposts' => $measure['posts'],
-        ] + $studentparams + $posterparams;
-        $record = $DB->get_record_sql($sql, $params);
+        $record = $DB->get_record_sql($sql, ['forumid' => $forumid] + $studentparams + $posterparams);
 
         return ['total' => (int) $record->total, 'done' => (int) $record->done];
     }
@@ -190,7 +138,7 @@ class participation {
      * Rounding never hides someone: while at least one person is in a group, that group shows at least 1%, and
      * while someone is outside the first one it never reaches 100%.
      *
-     * @param int $done Those who did what the measure asks.
+     * @param int $done Those with at least one message.
      * @param int $total The whole population.
      * @return int[] The keys done and todo.
      */

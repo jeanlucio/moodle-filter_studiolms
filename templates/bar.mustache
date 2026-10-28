@@ -28,6 +28,7 @@
             {"key": "done", "label": "Participated", "percent": 70, "width": "70.00", "hasbar": true, "counttext": "7 of 10"},
             {"key": "todo", "label": "Not yet participated", "percent": 30, "width": "30.00", "hasbar": true, "counttext": "3 of 10"}
         ],
+        "note": "Counts who sent at least one message in this forum.",
         "notice": ""
     }
 }}
@@ -39,6 +40,7 @@
         <li class="slw-bar-item"><span class="slw-bar-dot slw-bar-{{key}}"></span><span class="slw-bar-label">{{label}}</span> <span class="slw-bar-value">{{percent}}%{{#counttext}} ({{counttext}}){{/counttext}}</span></li>
         {{/segments}}
     </ul>
+    <div class="slw-bar-note">{{note}}</div>
     {{#notice}}
     <div class="slw-bar-notice">{{notice}}</div>
     {{/notice}}

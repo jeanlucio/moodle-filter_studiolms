@@ -79,6 +79,11 @@ div.slw-bar .slw-bar-value {
     font-weight: 600;
 }
 
+div.slw-bar .slw-bar-note {
+    margin-block-start: 0.5rem;
+    font-size: 0.875rem;
+}
+
 div.slw-bar .slw-bar-notice {
     margin-block-start: 0.5rem;
     font-size: 0.875rem;

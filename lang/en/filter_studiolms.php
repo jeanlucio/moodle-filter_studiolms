@@ -25,6 +25,7 @@
 defined('MOODLE_INTERNAL') || die();
 // phpcs:disable moodle.Files.LineLength
 
+$string['barnote'] = 'Counts who sent at least one message in this forum.';
 $string['cachedef_participation'] = 'Participation counts of forums';
 $string['count_of'] = '{$a->count} of {$a->total}';
 $string['enable_forumstats'] = 'Forum statistics widget';
@@ -34,14 +35,10 @@ $string['formhelp'] = 'Write [FORUMSTATS] in the description to show how much of
 $string['formhelpinactive'] = 'The StudioLMS widgets filter is not active in this course, so the marker will show as plain text. Turn it on under Filters.';
 $string['formlabel'] = 'Class participation';
 $string['hiddenforstudents'] = 'Hidden from students: the class has fewer than {$a} students.';
-$string['measure_discussions_done'] = 'Started discussions';
-$string['measure_discussions_todo'] = 'Not yet started';
-$string['measure_posts_done'] = 'Participated';
-$string['measure_posts_todo'] = 'Not yet participated';
-$string['measure_replies_done'] = 'Sent replies';
-$string['measure_replies_todo'] = 'Not yet sent';
 $string['minclasssize'] = 'Minimum class size';
 $string['minclasssize_desc'] = 'Below this number of students the bar is hidden from students, so nobody can be identified.';
+$string['notparticipated'] = 'Not yet participated';
+$string['participated'] = 'Participated';
 $string['participation'] = 'Participation in this forum';
 $string['pluginname'] = 'StudioLMS widgets';
 $string['privacy:metadata'] = 'The StudioLMS widgets filter does not store any personal data.';

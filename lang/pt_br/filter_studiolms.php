@@ -25,6 +25,7 @@
 defined('MOODLE_INTERNAL') || die();
 // phpcs:disable moodle.Files.LineLength
 
+$string['barnote'] = 'Conta quem enviou ao menos uma mensagem neste fórum.';
 $string['cachedef_participation'] = 'Contagens de participação dos fóruns';
 $string['count_of'] = '{$a->count} de {$a->total}';
 $string['enable_forumstats'] = 'Widget das estatísticas de fórum';
@@ -34,14 +35,10 @@ $string['formhelp'] = 'Escreva [FORUMSTATS] na descrição para mostrar quanto d
 $string['formhelpinactive'] = 'O filtro Widgets do StudioLMS não está ativo neste curso, então a marca aparecerá como texto. Ative-o em Filtros.';
 $string['formlabel'] = 'Participação da turma';
 $string['hiddenforstudents'] = 'Oculto para estudantes: a turma tem menos de {$a} estudantes.';
-$string['measure_discussions_done'] = 'Iniciaram discussões';
-$string['measure_discussions_todo'] = 'Ainda não iniciaram';
-$string['measure_posts_done'] = 'Participaram';
-$string['measure_posts_todo'] = 'Ainda não participaram';
-$string['measure_replies_done'] = 'Enviaram réplicas';
-$string['measure_replies_todo'] = 'Ainda não enviaram';
 $string['minclasssize'] = 'Tamanho mínimo da turma';
 $string['minclasssize_desc'] = 'Abaixo deste número de estudantes a barra fica oculta para estudantes, para ninguém ser identificado.';
+$string['notparticipated'] = 'Ainda não participaram';
+$string['participated'] = 'Participaram';
 $string['participation'] = 'Participação neste fórum';
 $string['pluginname'] = 'Widgets do StudioLMS';
 $string['privacy:metadata'] = 'O filtro Widgets do StudioLMS não armazena nenhum dado pessoal.';

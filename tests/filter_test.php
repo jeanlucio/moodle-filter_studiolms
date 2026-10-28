@@ -211,7 +211,10 @@ final class filter_test extends \advanced_testcase {
 
         $cleaned = clean_text($html, FORMAT_HTML);
 
-        $needles = ['slw-bar-track', 'slw-bar-done', 'slw-bar-todo', 'width:70%', 'width:30%', 'slw-bar-legend', 'slw-bar-value'];
+        $needles = [
+            'slw-bar-track', 'slw-bar-done', 'slw-bar-todo', 'width:70%', 'width:30%', 'slw-bar-legend', 'slw-bar-value',
+            'slw-bar-note',
+        ];
         foreach ($needles as $needle) {
             $this->assertStringContainsString($needle, $cleaned, $needle);
         }
@@ -220,38 +223,29 @@ final class filter_test extends \advanced_testcase {
     }
 
     /**
-     * The labels follow the completion rule of the forum, and the bar counts what the rule asks.
+     * The bar says what it counts, whatever the completion rules of the forum are.
      *
      * @return void
      */
-    public function test_labels_and_numbers_follow_the_completion_rule(): void {
+    public function test_the_bar_counts_any_message_and_says_so(): void {
         global $CFG;
         $this->resetAfterTest();
         $CFG->enablecompletion = true;
-        $cases = [
-            ['completionreplies' => 1, 'completiondiscussions' => 0, 'label' => 'Sent replies', 'done' => 5],
-            ['completionreplies' => 0, 'completiondiscussions' => 1, 'label' => 'Started discussions', 'done' => 2],
-            ['completionreplies' => 0, 'completiondiscussions' => 0, 'label' => 'Participated', 'done' => 7],
-        ];
-        foreach ($cases as $case) {
-            $setup = $this->make_forum_course(10, [
-                'completion' => COMPLETION_TRACKING_AUTOMATIC,
-                'completionreplies' => $case['completionreplies'],
-                'completiondiscussions' => $case['completiondiscussions'],
-            ], ['enablecompletion' => 1]);
-            $discussion = $this->start_discussion($setup, $setup['teacher']);
-            for ($i = 0; $i < 5; $i++) {
-                $this->reply_to($discussion, $setup['students'][$i]);
-            }
-            $this->start_discussion($setup, $setup['students'][5]);
-            $this->start_discussion($setup, $setup['students'][6]);
-            $this->setUser($setup['teacher']);
+        $setup = $this->make_forum_course(
+            10,
+            ['completion' => COMPLETION_TRACKING_AUTOMATIC, 'completionreplies' => 3],
+            ['enablecompletion' => 1]
+        );
+        $discussion = $this->start_discussion($setup, $setup['teacher']);
+        $this->reply_to($discussion, $setup['students'][0]);
+        $this->start_discussion($setup, $setup['students'][1]);
+        $this->setUser($setup['teacher']);
 
-            $html = $this->make_filter(\context_module::instance($setup['cm']->id))->filter('[FORUMSTATS]');
+        $html = $this->make_filter(\context_module::instance($setup['cm']->id))->filter('[FORUMSTATS]');
 
-            $this->assertStringContainsString($case['label'], $html, $case['label']);
-            $this->assertStringContainsString($case['done'] . ' of 10', $html, $case['label']);
-        }
+        $this->assertStringContainsString('Participated', $html);
+        $this->assertStringContainsString('2 of 10', $html);
+        $this->assertStringContainsString(get_string('barnote', 'filter_studiolms'), $html);
     }
 
     /**

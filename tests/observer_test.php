@@ -40,15 +40,6 @@ final class observer_test extends \advanced_testcase {
     use forum_course_trait;
 
     /**
-     * The measure of a forum with no completion rule: any message counts.
-     *
-     * @return array
-     */
-    private function measure(): array {
-        return ['kind' => 'posts', 'posts' => 1, 'discussions' => 0, 'replies' => 0];
-    }
-
-    /**
      * A new reply makes the counts of that forum fresh, and leaves the cache of another forum alone.
      *
      * The reply goes through the web service of the forum, which triggers post_created as the page of the forum does.
@@ -63,11 +54,11 @@ final class observer_test extends \advanced_testcase {
         $secondcontext = \context_module::instance($second['cm']->id);
         $firstdiscussion = $this->start_discussion($first, $first['teacher']);
         $seconddiscussion = $this->start_discussion($second, $second['teacher']);
-        $this->assertSame(0, participation::get_counts((int) $first['forum']->id, $firstcontext, null, $this->measure())['done']);
-        $this->assertSame(0, participation::get_counts((int) $second['forum']->id, $secondcontext, null, $this->measure())['done']);
+        $this->assertSame(0, participation::get_counts((int) $first['forum']->id, $firstcontext, null)['done']);
+        $this->assertSame(0, participation::get_counts((int) $second['forum']->id, $secondcontext, null)['done']);
 
         $this->reply_to($firstdiscussion, $first['students'][0]);
-        $this->assertSame(1, participation::get_counts((int) $first['forum']->id, $firstcontext, null, $this->measure())['done']);
+        $this->assertSame(1, participation::get_counts((int) $first['forum']->id, $firstcontext, null)['done']);
 
         // A reply written straight to the table, without the event, leaves the second forum on its cached counts.
         $this->getDataGenerator()->get_plugin_generator('mod_forum')->create_post([
@@ -75,9 +66,9 @@ final class observer_test extends \advanced_testcase {
             'parent' => $seconddiscussion->firstpost,
             'userid' => $second['students'][0]->id,
         ]);
-        $this->assertSame(0, participation::get_counts((int) $second['forum']->id, $secondcontext, null, $this->measure())['done']);
+        $this->assertSame(0, participation::get_counts((int) $second['forum']->id, $secondcontext, null)['done']);
         $this->reply_to($seconddiscussion, $second['students'][1]);
-        $this->assertSame(2, participation::get_counts((int) $second['forum']->id, $secondcontext, null, $this->measure())['done']);
+        $this->assertSame(2, participation::get_counts((int) $second['forum']->id, $secondcontext, null)['done']);
     }
 
     /**
@@ -92,12 +83,12 @@ final class observer_test extends \advanced_testcase {
         $discussion = $this->start_discussion($setup, $setup['teacher']);
         $post = $this->reply_to($discussion, $setup['students'][0]);
         $forumid = (int) $setup['forum']->id;
-        $this->assertSame(1, participation::get_counts($forumid, $context, null, $this->measure())['done']);
+        $this->assertSame(1, participation::get_counts($forumid, $context, null)['done']);
 
         $this->setUser($setup['students'][0]);
         \mod_forum_external::delete_post($post->id);
 
-        $this->assertSame(0, participation::get_counts($forumid, $context, null, $this->measure())['done']);
+        $this->assertSame(0, participation::get_counts($forumid, $context, null)['done']);
     }
 
     /**
@@ -114,12 +105,12 @@ final class observer_test extends \advanced_testcase {
         $context = \context_module::instance($setup['cm']->id);
         $forumid = (int) $setup['forum']->id;
         $discussion = $this->start_discussion($setup, $setup['teacher']);
-        $this->assertSame(0, participation::get_counts($forumid, $context, null, $this->measure())['done']);
+        $this->assertSame(0, participation::get_counts($forumid, $context, null)['done']);
         $this->reply_to($discussion, $setup['students'][0]);
 
-        participation::get_counts($forumid, $context, null, $this->measure());
+        participation::get_counts($forumid, $context, null);
         $this->reply_to($discussion, $setup['students'][1]);
-        $this->assertSame(2, participation::get_counts($forumid, $context, null, $this->measure())['done']);
+        $this->assertSame(2, participation::get_counts($forumid, $context, null)['done']);
 
         // Written without the event, then announced by a discussion event naming the forum.
         $this->getDataGenerator()->get_plugin_generator('mod_forum')->create_post([
@@ -132,16 +123,16 @@ final class observer_test extends \advanced_testcase {
             'objectid' => $discussion->id,
             'other' => ['forumid' => $forumid],
         ])->trigger();
-        $this->assertSame(2, participation::get_counts($forumid, $context, null, $this->measure())['done']);
+        $this->assertSame(2, participation::get_counts($forumid, $context, null)['done']);
 
         $otherid = (int) $other['forum']->id;
         $othercontext = \context_module::instance($other['cm']->id);
-        participation::get_counts($otherid, $othercontext, null, $this->measure());
+        participation::get_counts($otherid, $othercontext, null);
         \mod_forum\event\discussion_moved::create([
             'context' => $context,
             'objectid' => $discussion->id,
             'other' => ['fromforumid' => $forumid, 'toforumid' => $otherid],
         ])->trigger();
-        $this->assertSame(2, participation::get_counts($forumid, $context, null, $this->measure())['done']);
+        $this->assertSame(2, participation::get_counts($forumid, $context, null)['done']);
     }
 }
