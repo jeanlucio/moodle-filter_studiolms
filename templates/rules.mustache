@@ -19,17 +19,18 @@
 
     Rules of a quiz drawn in place of the [QUIZINFO] marker.
 
-    Only div and span with classes, so it survives the HTML cleaner.
+    Only div, span and an icon font element with classes, so it survives the HTML cleaner.
 
     Example context (json):
     {
         "title": "Quiz rules",
         "cards": [
-            {"label": "Questions", "value": "10"},
-            {"label": "Attempts", "value": "Unlimited"},
-            {"label": "Time", "value": "1 hour"},
-            {"label": "Grade to pass", "value": "6 of 10"},
-            {"label": "Closes", "value": "30/10/26, 18:00"}
+            {"icon": "fa-circle-question", "label": "Questions", "value": "10"},
+            {"icon": "fa-clock", "label": "Time", "value": "1 hour"},
+            {"icon": "fa-rotate-right", "label": "Attempts", "value": "Unlimited"},
+            {"icon": "fa-medal", "label": "Grade to pass", "value": "6 of 10"},
+            {"icon": "fa-scale-balanced", "label": "Grading method", "value": "Highest grade"},
+            {"icon": "fa-calendar-days", "label": "Closes", "value": "30/10/26, 18:00"}
         ]
     }
 }}
@@ -37,7 +38,11 @@
     <div class="slw-quiz-title">{{title}}</div>
     <div class="slw-quiz-cards">
         {{#cards}}
-        <div class="slw-quiz-card"><span class="slw-quiz-value">{{value}}</span><span class="slw-quiz-label">{{label}}</span></div>
+        <div class="slw-quiz-card">
+            <span class="slw-quiz-icon"><i class="fa-solid {{icon}}" aria-hidden="true"></i></span>
+            <span class="slw-quiz-value">{{value}}</span>
+            <span class="slw-quiz-label">{{label}}</span>
+        </div>
         {{/cards}}
     </div>
 </div>

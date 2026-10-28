@@ -169,24 +169,57 @@ final class quiz_rules_test extends \advanced_testcase {
     }
 
     /**
-     * The cards say "Unlimited" and "No limit" for zero, and the grade and the date only when they exist.
+     * The cards say "Unlimited" and "No limit" for zero, and the grade, the method and the date only when they apply.
      *
      * @return void
      */
     public function test_cards(): void {
         $this->resetAfterTest();
-        $base = ['questions' => 5, 'attempts' => 0, 'timelimit' => 0, 'passgrade' => 0.0, 'grade' => 10.0, 'timeclose' => 0];
+        $base = [
+            'questions' => 5, 'attempts' => 0, 'timelimit' => 0, 'grademethod' => (int) QUIZ_GRADEHIGHEST,
+            'passgrade' => 0.0, 'grade' => 10.0, 'timeclose' => 0,
+        ];
 
         $context = \filter_studiolms\output\rules::export_context($base);
-        $this->assertSame(['Questions', 'Attempts', 'Time'], array_column($context['cards'], 'label'));
-        $this->assertSame(['5', 'Unlimited', 'No limit'], array_column($context['cards'], 'value'));
+        $this->assertSame(['Questions', 'Time', 'Attempts', 'Grading method'], array_column($context['cards'], 'label'));
+        $this->assertSame(['5', 'No limit', 'Unlimited', 'Highest grade'], array_column($context['cards'], 'value'));
+        $this->assertSame(
+            ['fa-circle-question', 'fa-clock', 'fa-rotate-right', 'fa-scale-balanced'],
+            array_column($context['cards'], 'icon')
+        );
 
-        $full = ['attempts' => 2, 'timelimit' => 90 * MINSECS, 'passgrade' => 6.5, 'timeclose' => 2000000000] + $base;
+        // With one attempt only, how the attempts make the grade means nothing, so it is left out.
+        $single = \filter_studiolms\output\rules::export_context(['attempts' => 1] + $base);
+        $this->assertSame(['Questions', 'Time', 'Attempts'], array_column($single['cards'], 'label'));
+
+        $full = [
+            'attempts' => 2, 'timelimit' => 90 * MINSECS, 'passgrade' => 6.5, 'timeclose' => 2000000000,
+            'grademethod' => QUIZ_GRADEAVERAGE,
+        ] + $base;
         $context = \filter_studiolms\output\rules::export_context($full);
-        $this->assertSame(['Questions', 'Attempts', 'Time', 'Grade to pass', 'Closes'], array_column($context['cards'], 'label'));
-        $this->assertSame('2', $context['cards'][1]['value']);
-        $this->assertSame(format_time(90 * MINSECS), $context['cards'][2]['value']);
-        $this->assertSame('6.5 of 10', $context['cards'][3]['value']);
-        $this->assertSame(userdate(2000000000, get_string('strftimedatetimeshort', 'langconfig')), $context['cards'][4]['value']);
+        $this->assertSame(
+            ['Questions', 'Time', 'Attempts', 'Grade to pass', 'Grading method', 'Closes'],
+            array_column($context['cards'], 'label')
+        );
+        $values = array_column($context['cards'], 'value');
+        $this->assertSame(format_time(90 * MINSECS), $values[1]);
+        $this->assertSame('2', $values[2]);
+        $this->assertSame('6.5 of 10', $values[3]);
+        $this->assertSame('Average grade', $values[4]);
+        $this->assertSame(userdate(2000000000, get_string('strftimedatetimeshort', 'langconfig')), $values[5]);
+    }
+
+    /**
+     * The grading method of the quiz is read with the other rules.
+     *
+     * @return void
+     */
+    public function test_reads_the_grading_method(): void {
+        $this->resetAfterTest();
+        $setup = $this->make_quiz(['grademethod' => QUIZ_ATTEMPTLAST, 'attempts' => 3], 1);
+
+        $rules = quiz_rules::get_rules((int) $setup['quiz']->id, (int) $setup['student']->id);
+
+        $this->assertSame((int) QUIZ_ATTEMPTLAST, $rules['grademethod']);
     }
 }

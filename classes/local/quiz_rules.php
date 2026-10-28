@@ -40,8 +40,9 @@ class quiz_rules {
      *
      * @param int $quizid The quiz id.
      * @param int $userid The user the rules are for.
-     * @return array The keys questions, attempts and timelimit (0 for no limit), passgrade and grade (0 when there is
-     *               no grade to pass), and timeclose (0 when it never closes).
+     * @return array The keys questions, attempts and timelimit (0 for no limit), grademethod (how the attempts make
+     *               the grade, the QUIZ_GRADE* constant), passgrade and grade (0 when there is no grade to pass), and
+     *               timeclose (0 when it never closes).
      */
     public static function get_rules(int $quizid, int $userid): array {
         global $DB;
@@ -59,6 +60,7 @@ class quiz_rules {
             'questions' => self::count_questions($quizobj->get_structure()),
             'attempts' => (int) $quiz->attempts,
             'timelimit' => (int) $quiz->timelimit,
+            'grademethod' => (int) $quiz->grademethod,
             'passgrade' => $passgrade,
             'grade' => (float) $quiz->grade,
             'timeclose' => (int) $quiz->timeclose,

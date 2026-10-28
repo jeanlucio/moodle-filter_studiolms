@@ -35,15 +35,20 @@ class rules {
      * @return array
      */
     public static function export_context(array $rules): array {
+        global $CFG;
+        require_once($CFG->dirroot . '/mod/quiz/lib.php');
+
         $attempts = $rules['attempts'] > 0 ? (string) $rules['attempts'] : get_string('quiz_unlimited', 'filter_studiolms');
         $time = $rules['timelimit'] > 0 ? format_time($rules['timelimit']) : get_string('quiz_nolimit', 'filter_studiolms');
         $cards = [
-            ['label' => get_string('quiz_questions', 'filter_studiolms'), 'value' => (string) $rules['questions']],
-            ['label' => get_string('quiz_attempts', 'filter_studiolms'), 'value' => $attempts],
-            ['label' => get_string('quiz_time', 'filter_studiolms'), 'value' => $time],
+            ['icon' => 'fa-circle-question', 'label' => get_string('quiz_questions', 'filter_studiolms'),
+                'value' => (string) $rules['questions']],
+            ['icon' => 'fa-clock', 'label' => get_string('quiz_time', 'filter_studiolms'), 'value' => $time],
+            ['icon' => 'fa-rotate-right', 'label' => get_string('quiz_attempts', 'filter_studiolms'), 'value' => $attempts],
         ];
         if ($rules['passgrade'] > 0) {
             $cards[] = [
+                'icon' => 'fa-medal',
                 'label' => get_string('quiz_passgrade', 'filter_studiolms'),
                 'value' => get_string('count_of', 'filter_studiolms', [
                     'count' => format_float($rules['passgrade'], 2, true, true),
@@ -51,8 +56,18 @@ class rules {
                 ]),
             ];
         }
+        // How the attempts make the grade only matters when there can be more than one.
+        $methods = quiz_get_grading_options();
+        if ($rules['attempts'] !== 1 && isset($methods[$rules['grademethod']])) {
+            $cards[] = [
+                'icon' => 'fa-scale-balanced',
+                'label' => get_string('quiz_grademethod', 'filter_studiolms'),
+                'value' => $methods[$rules['grademethod']],
+            ];
+        }
         if ($rules['timeclose'] > 0) {
             $cards[] = [
+                'icon' => 'fa-calendar-days',
                 'label' => get_string('quiz_closes', 'filter_studiolms'),
                 'value' => userdate($rules['timeclose'], get_string('strftimedatetimeshort', 'langconfig')),
             ];

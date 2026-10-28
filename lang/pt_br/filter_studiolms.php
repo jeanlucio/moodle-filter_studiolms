@@ -49,6 +49,7 @@ $string['pluginname'] = 'Widgets do StudioLMS';
 $string['privacy:metadata'] = 'O filtro Widgets do StudioLMS não armazena nenhum dado pessoal.';
 $string['quiz_attempts'] = 'Tentativas';
 $string['quiz_closes'] = 'Fecha em';
+$string['quiz_grademethod'] = 'Método de avaliação';
 $string['quiz_nolimit'] = 'Sem limite';
 $string['quiz_passgrade'] = 'Nota para passar';
 $string['quiz_questions'] = 'Questões';

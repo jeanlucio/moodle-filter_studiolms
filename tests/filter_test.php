@@ -397,7 +397,9 @@ final class filter_test extends \advanced_testcase {
 
         $cleaned = clean_text($own, FORMAT_HTML);
         $this->assertSame(substr_count($own, 'slw-quiz-card'), substr_count($cleaned, 'slw-quiz-card'));
-        $this->assertDoesNotMatchRegularExpression('/<svg|data-|aria-|role=/', $own);
+        $this->assertStringContainsString('fa-solid fa-clock', $cleaned);
+        $this->assertStringContainsString('Grading method', $own);
+        $this->assertDoesNotMatchRegularExpression('/<svg|data-|role=|aria-(?!hidden)/', $own);
 
         // Anywhere but a quiz, or with the widget off, the marker is removed.
         $page = $generator->create_module('page', ['course' => $course->id]);
