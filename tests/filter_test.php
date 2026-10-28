@@ -29,6 +29,7 @@ defined('MOODLE_INTERNAL') || die();
 
 global $CFG;
 require_once($CFG->dirroot . '/course/lib.php');
+require_once(__DIR__ . '/fixtures/course_actions_trait.php');
 require_once(__DIR__ . '/fixtures/forum_course_trait.php');
 
 /**
@@ -43,6 +44,7 @@ require_once(__DIR__ . '/fixtures/forum_course_trait.php');
  * @covers \filter_studiolms\widget\quizinfo
  */
 final class filter_test extends \advanced_testcase {
+    use course_actions_trait;
     use forum_course_trait;
 
     /**
@@ -268,8 +270,8 @@ final class filter_test extends \advanced_testcase {
         $info = get_fast_modinfo($course);
         course_update_section($course, $info->get_section_info(2), ['name' => 'Secret & hidden']);
         course_update_section($course, $info->get_section_info(1), ['name' => 'A & B > 3']);
-        set_section_visible($course->id, 2, 0);
-        course_set_marker($course->id, 3);
+        $this->hide_section($course, 2);
+        $this->highlight_section($course, 3);
         $page = $generator->create_module('page', ['course' => $course->id]);
         $filter = $this->make_filter(\context_module::instance($page->cmid));
 
@@ -340,7 +342,7 @@ final class filter_test extends \advanced_testcase {
         $course = $generator->create_course(['numsections' => 3, 'format' => 'topics']);
         $student = $generator->create_user();
         $generator->enrol_user($student->id, $course->id, 'student');
-        course_set_marker($course->id, 2);
+        $this->highlight_section($course, 2);
         $this->setUser($student);
 
         $html = $this->make_filter(\context_course::instance($course->id))->filter('[COURSEMAP]');

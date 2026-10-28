@@ -25,10 +25,13 @@
 
 namespace filter_studiolms\local;
 
+use filter_studiolms\course_actions_trait;
+
 defined('MOODLE_INTERNAL') || die();
 
 global $CFG;
 require_once($CFG->dirroot . '/course/lib.php');
+require_once(__DIR__ . '/../fixtures/course_actions_trait.php');
 
 /**
  * Tests of filter_studiolms\local\course_sections.
@@ -37,6 +40,8 @@ require_once($CFG->dirroot . '/course/lib.php');
  * @covers \filter_studiolms\output\map
  */
 final class course_sections_test extends \advanced_testcase {
+    use course_actions_trait;
+
     /**
      * Makes a course with sections, a student and a teacher enrolled by role.
      *
@@ -105,7 +110,7 @@ final class course_sections_test extends \advanced_testcase {
     public function test_hidden_sections_follow_the_visibility_of_the_viewer(): void {
         $this->resetAfterTest();
         $setup = $this->make_course(4);
-        set_section_visible($setup['course']->id, 2, 0);
+        $this->hide_section($setup['course'], 2);
 
         $this->setUser($setup['student']);
         $steps = course_sections::get_steps((int) $setup['course']->id);
@@ -124,7 +129,7 @@ final class course_sections_test extends \advanced_testcase {
     public function test_highlighted_section_marks_the_steps(): void {
         $this->resetAfterTest();
         $setup = $this->make_course(4);
-        course_set_marker($setup['course']->id, 2);
+        $this->highlight_section($setup['course'], 2);
         $this->setUser($setup['student']);
 
         $steps = course_sections::get_steps((int) $setup['course']->id);
@@ -140,8 +145,8 @@ final class course_sections_test extends \advanced_testcase {
     public function test_hidden_current_section_marks_nobody_for_the_student(): void {
         $this->resetAfterTest();
         $setup = $this->make_course(4);
-        course_set_marker($setup['course']->id, 3);
-        set_section_visible($setup['course']->id, 3, 0);
+        $this->highlight_section($setup['course'], 3);
+        $this->hide_section($setup['course'], 3);
 
         $this->setUser($setup['student']);
         $this->assertSame(['none', 'none', 'none'], array_column(course_sections::get_steps((int) $setup['course']->id), 'state'));
