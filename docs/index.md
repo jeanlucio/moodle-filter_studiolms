@@ -15,7 +15,7 @@ lang: en
 [![Last Commit](https://img.shields.io/github/last-commit/jeanlucio/moodle-filter_studiolms?style=flat)](https://github.com/jeanlucio/moodle-filter_studiolms/commits)
 [![Open Issues](https://img.shields.io/github/issues/jeanlucio/moodle-filter_studiolms?style=flat)](https://github.com/jeanlucio/moodle-filter_studiolms/issues)
 
-**StudioLMS Widgets** (`filter_studiolms`) is a text filter for Moodle. A teacher types a short marker in some text of the course, and the page shows live data in its place: how much of the class has taken part in a forum (`[FORUMSTATS]`), the sections of the course as a path (`[COURSEMAP]`) and the rules of a quiz as they are now (`[QUIZINFO]`). It needs no AI and no other plugin.
+**StudioLMS Widgets** (`filter_studiolms`) puts live information in the pages of a course: how much of the class has taken part in a forum, where the student is in the course, and the rules of a quiz as they are now. A teacher types a short marker in the text (`[FORUMSTATS]`, `[COURSEMAP]` or `[QUIZINFO]`) and the filter shows the data in its place when the page is shown, so it is always up to date. It needs no AI and no other plugin.
 
 <p class="page-hint">👈 Use the sidebar to jump to any section on this page.</p>
 

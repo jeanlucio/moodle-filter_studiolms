@@ -17,7 +17,7 @@
 
 ## English
 
-**StudioLMS Widgets** (`filter_studiolms`) is a text filter. A teacher types a short marker in some text of the course and the page shows live data in its place: how much of the class has taken part in a forum (`[FORUMSTATS]`), the sections of the course as a path (`[COURSEMAP]`) and the rules of a quiz as they are now (`[QUIZINFO]`). It needs no AI and no other plugin, and it is part of the [StudioLMS family](https://jeanlucio.github.io/studiolms/).
+**StudioLMS Widgets** (`filter_studiolms`) puts live information in the pages of a course: how much of the class has taken part in a forum, where the student is in the course, and the rules of a quiz as they are now. A teacher types a short marker in the text (`[FORUMSTATS]`, `[COURSEMAP]` or `[QUIZINFO]`) and the filter shows the data in its place when the page is shown, so it is always up to date. It needs no AI and no other plugin, and it is part of the [StudioLMS family](https://jeanlucio.github.io/studiolms/).
 
 📚 **[Full documentation](https://jeanlucio.github.io/moodle-filter_studiolms/)**: the three widgets and their options, the integrations, the automated tests, and security details.
 
@@ -38,7 +38,7 @@
 
 ## Português
 
-O **StudioLMS Widgets** (`filter_studiolms`) é um filtro de texto. O professor digita uma marca curta em algum texto do curso e a página mostra dados ao vivo no lugar dela: quanto da turma participou de um fórum (`[FORUMSTATS]`), as seções do curso como um caminho (`[COURSEMAP]`) e as regras de um questionário como estão agora (`[QUIZINFO]`). Não precisa de IA nem de outro plugin, e faz parte da [família StudioLMS](https://jeanlucio.github.io/studiolms/).
+O **StudioLMS Widgets** (`filter_studiolms`) coloca informação ao vivo nas páginas de um curso: quanto da turma participou de um fórum, onde o estudante está no curso e as regras de um questionário como estão agora. O professor digita uma marca curta no texto (`[FORUMSTATS]`, `[COURSEMAP]` ou `[QUIZINFO]`) e o filtro mostra os dados no lugar dela quando a página é exibida, então está sempre atualizado. Não precisa de IA nem de outro plugin, e faz parte da [família StudioLMS](https://jeanlucio.github.io/studiolms/).
 
 📚 **[Documentação completa](https://jeanlucio.github.io/moodle-filter_studiolms/pt.html)**: os três widgets e suas opções, as integrações, os testes automatizados e os detalhes de segurança.
 
