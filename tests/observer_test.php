@@ -92,47 +92,146 @@ final class observer_test extends \advanced_testcase {
     }
 
     /**
-     * New discussions and moved ones make the counts fresh; the page of the forum triggers these events itself.
+     * Writes a reply straight to the table, without the event the page of the forum would trigger.
      *
-     * The events are built with the data of post.php and discuss.php, since no web service moves a discussion.
-     *
+     * @param \stdClass $discussion The discussion.
+     * @param \stdClass $user The author, who must not have taken part in the forum yet for the count to change.
      * @return void
      */
-    public function test_discussion_events_invalidate_the_forums_they_name(): void {
-        $this->resetAfterTest();
-        $setup = $this->make_forum_course(2);
-        $other = $this->make_forum_course(2);
-        $context = \context_module::instance($setup['cm']->id);
-        $forumid = (int) $setup['forum']->id;
-        $discussion = $this->start_discussion($setup, $setup['teacher']);
-        $this->assertSame(0, participation::get_counts($forumid, $context, null)['done']);
-        $this->reply_to($discussion, $setup['students'][0]);
-
-        participation::get_counts($forumid, $context, null);
-        $this->reply_to($discussion, $setup['students'][1]);
-        $this->assertSame(2, participation::get_counts($forumid, $context, null)['done']);
-
-        // Written without the event, then announced by a discussion event naming the forum.
+    private function write_reply_without_event(\stdClass $discussion, \stdClass $user): void {
         $this->getDataGenerator()->get_plugin_generator('mod_forum')->create_post([
             'discussion' => $discussion->id,
             'parent' => $discussion->firstpost,
-            'userid' => $setup['students'][0]->id,
+            'userid' => $user->id,
         ]);
-        \mod_forum\event\discussion_created::create([
-            'context' => $context,
-            'objectid' => $discussion->id,
-            'other' => ['forumid' => $forumid],
-        ])->trigger();
-        $this->assertSame(2, participation::get_counts($forumid, $context, null)['done']);
+    }
 
-        $otherid = (int) $other['forum']->id;
-        $othercontext = \context_module::instance($other['cm']->id);
-        participation::get_counts($otherid, $othercontext, null);
-        \mod_forum\event\discussion_moved::create([
-            'context' => $context,
+    /**
+     * Counts of a forum as the cache gives them.
+     *
+     * @param array $setup The forum course.
+     * @return int How many students have taken part.
+     */
+    private function done(array $setup): int {
+        return participation::get_counts(
+            (int) $setup['forum']->id,
+            \context_module::instance($setup['cm']->id),
+            null
+        )['done'];
+    }
+
+    /**
+     * A new discussion makes the counts fresh.
+     *
+     * Each step is checked, so the test fails if the observer is gone: a student who has not taken part writes a post
+     * with no event, the cache still says 0, and only the event makes it say 1. The page of the forum triggers the
+     * event itself; here it is built with the data of post.php.
+     *
+     * @return void
+     */
+    public function test_a_new_discussion_invalidates_its_forum(): void {
+        $this->resetAfterTest();
+        $setup = $this->make_forum_course(2);
+        $discussion = $this->start_discussion($setup, $setup['teacher']);
+        $this->assertSame(0, $this->done($setup));
+
+        $this->write_reply_without_event($discussion, $setup['students'][0]);
+        $this->assertSame(0, $this->done($setup), 'without the event the cache is still the old one');
+
+        \mod_forum\event\discussion_created::create([
+            'context' => \context_module::instance($setup['cm']->id),
             'objectid' => $discussion->id,
-            'other' => ['fromforumid' => $forumid, 'toforumid' => $otherid],
+            'other' => ['forumid' => (int) $setup['forum']->id],
         ])->trigger();
-        $this->assertSame(2, participation::get_counts($forumid, $context, null)['done']);
+
+        $this->assertSame(1, $this->done($setup));
+    }
+
+    /**
+     * A deleted discussion makes the counts fresh.
+     *
+     * @return void
+     */
+    public function test_a_deleted_discussion_invalidates_its_forum(): void {
+        $this->resetAfterTest();
+        $setup = $this->make_forum_course(2);
+        $discussion = $this->start_discussion($setup, $setup['teacher']);
+        $this->assertSame(0, $this->done($setup));
+
+        $this->write_reply_without_event($discussion, $setup['students'][0]);
+        $this->assertSame(0, $this->done($setup), 'without the event the cache is still the old one');
+
+        \mod_forum\event\discussion_deleted::create([
+            'context' => \context_module::instance($setup['cm']->id),
+            'objectid' => $discussion->id,
+            'other' => ['forumid' => (int) $setup['forum']->id],
+        ])->trigger();
+
+        $this->assertSame(1, $this->done($setup));
+    }
+
+    /**
+     * A discussion that moves between two forums makes the counts of both fresh, the one it left and the one it
+     * went to, and leaves a third alone.
+     *
+     * @return void
+     */
+    public function test_a_moved_discussion_invalidates_both_forums_and_no_other(): void {
+        $this->resetAfterTest();
+        $from = $this->make_forum_course(2);
+        $to = $this->make_forum_course(2);
+        $third = $this->make_forum_course(2);
+        $fromdiscussion = $this->start_discussion($from, $from['teacher']);
+        $todiscussion = $this->start_discussion($to, $to['teacher']);
+        $thirddiscussion = $this->start_discussion($third, $third['teacher']);
+        foreach ([$from, $to, $third] as $setup) {
+            $this->assertSame(0, $this->done($setup));
+        }
+
+        $this->write_reply_without_event($fromdiscussion, $from['students'][0]);
+        $this->write_reply_without_event($todiscussion, $to['students'][0]);
+        $this->write_reply_without_event($thirddiscussion, $third['students'][0]);
+        foreach ([$from, $to, $third] as $setup) {
+            $this->assertSame(0, $this->done($setup), 'without the event the cache is still the old one');
+        }
+
+        \mod_forum\event\discussion_moved::create([
+            'context' => \context_module::instance($from['cm']->id),
+            'objectid' => $fromdiscussion->id,
+            'other' => ['fromforumid' => (int) $from['forum']->id, 'toforumid' => (int) $to['forum']->id],
+        ])->trigger();
+
+        $this->assertSame(1, $this->done($from), 'the forum it left');
+        $this->assertSame(1, $this->done($to), 'the forum it went to');
+        $this->assertSame(0, $this->done($third), 'a forum the event does not name keeps its cache');
+    }
+
+    /**
+     * A forum event that names no forum changes nothing, and does not fail.
+     *
+     * @return void
+     */
+    public function test_an_event_that_names_no_forum_is_ignored(): void {
+        $this->resetAfterTest();
+        $setup = $this->make_forum_course(2);
+        $discussion = $this->start_discussion($setup, $setup['teacher']);
+        $this->assertSame(0, $this->done($setup));
+        $this->write_reply_without_event($discussion, $setup['students'][0]);
+
+        foreach (['discussion_created', 'discussion_deleted'] as $name) {
+            $class = '\\mod_forum\\event\\' . $name;
+            $this->assertNull(\filter_studiolms\observer::forum_changed($class::create([
+                'context' => \context_module::instance($setup['cm']->id),
+                'objectid' => $discussion->id,
+                'other' => ['forumid' => 0],
+            ])));
+        }
+        \filter_studiolms\observer::discussion_moved(\mod_forum\event\discussion_moved::create([
+            'context' => \context_module::instance($setup['cm']->id),
+            'objectid' => $discussion->id,
+            'other' => ['fromforumid' => 0, 'toforumid' => 0],
+        ]));
+
+        $this->assertSame(0, $this->done($setup), 'nothing was invalidated');
     }
 }

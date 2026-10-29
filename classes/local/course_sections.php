@@ -139,8 +139,7 @@ class course_sections {
         foreach (array_keys($included) as $number) {
             $tracked = 0;
             $complete = 0;
-            foreach ($modinfo->sections[$number] ?? [] as $cmid) {
-                $cm = $modinfo->cms[$cmid];
+            foreach (self::get_section_activities($modinfo, $number) as $cm) {
                 if (!$cm->uservisible || $completion->is_enabled($cm) == COMPLETION_TRACKING_NONE) {
                     continue;
                 }
@@ -162,6 +161,34 @@ class course_sections {
             }
         }
         return $states;
+    }
+
+    /**
+     * Lists the activities of a section, including those inside the subsections it holds.
+     *
+     * A subsection is a section of its own that is left out of the steps, so its activities belong to the section that
+     * holds it: the subsection is an activity of that section, and its own activities are in the delegated section it
+     * opens. One the user cannot see leaves its activities out.
+     *
+     * @param \course_modinfo $modinfo The course structure for the current user.
+     * @param int $number The section number.
+     * @return \cm_info[] The activities, the subsections themselves included.
+     */
+    private static function get_section_activities(\course_modinfo $modinfo, int $number): array {
+        $activities = [];
+        foreach ($modinfo->sections[$number] ?? [] as $cmid) {
+            $cm = $modinfo->cms[$cmid];
+            $activities[] = $cm;
+            // The API of delegated sections is newer than the oldest Moodle this plugin supports.
+            if ($cm->modname !== 'subsection' || !$cm->uservisible || !method_exists($cm, 'get_delegated_section_info')) {
+                continue;
+            }
+            $delegated = $cm->get_delegated_section_info();
+            if ($delegated && $delegated->uservisible && (int) $delegated->section !== $number) {
+                $activities = array_merge($activities, self::get_section_activities($modinfo, (int) $delegated->section));
+            }
+        }
+        return $activities;
     }
 
     /**

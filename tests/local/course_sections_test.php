@@ -346,6 +346,102 @@ final class course_sections_test extends \advanced_testcase {
     }
 
     /**
+     * Makes a course with completion whose section 1 holds a tracked page of its own and a subsection that holds
+     * another, and whose section 2 holds a third.
+     *
+     * @param bool $ownpage False to leave the section 1 with the subsection alone.
+     * @return array The keys course, student and cms (the tracked ones by name).
+     */
+    private function make_subsection_course(bool $ownpage = true): array {
+        global $CFG;
+        if (!array_key_exists('subsection', \core\plugininfo\mod::get_enabled_plugins() ?? [])) {
+            $this->markTestSkipped('Subsections are not available or not enabled in this Moodle.');
+        }
+        $CFG->enablecompletion = true;
+        $setup = $this->make_course(2, ['enablecompletion' => 1]);
+        $generator = $this->getDataGenerator();
+        $course = $setup['course']->id;
+        $tracked = ['completion' => COMPLETION_TRACKING_MANUAL];
+        $setup['cms'] = [];
+        if ($ownpage) {
+            $setup['cms']['a'] = $generator->create_module('page', ['course' => $course, 'section' => 1] + $tracked);
+        }
+        $generator->create_module('subsection', ['course' => $course, 'section' => 1]);
+        rebuild_course_cache($course, true);
+        $subsections = get_fast_modinfo($course)->get_instances_of('subsection');
+        $delegated = reset($subsections)->get_delegated_section_info();
+        $setup['cms']['b'] = $generator->create_module(
+            'page',
+            ['course' => $course, 'section' => $delegated->section] + $tracked
+        );
+        $setup['cms']['c'] = $generator->create_module('page', ['course' => $course, 'section' => 2] + $tracked);
+        return $setup;
+    }
+
+    /**
+     * An activity inside a subsection counts for the section that holds the subsection.
+     *
+     * Regression test: the subsection is left out of the steps, and its activities were left out of the count with it,
+     * so a section with a page of its own done and another in its subsection to do came out as done, and the current
+     * step jumped to the next section.
+     *
+     * @return void
+     */
+    public function test_progress_counts_the_activities_inside_a_subsection(): void {
+        $this->resetAfterTest();
+        $setup = $this->make_subsection_course();
+        $courseid = (int) $setup['course']->id;
+
+        $this->setUser($setup['student']);
+        $this->assertSame(['current', 'todo'], $this->states($courseid, 'progress'));
+
+        $this->complete($setup, 'a', $setup['student']);
+        $this->assertSame(
+            ['current', 'todo'],
+            $this->states($courseid, 'progress'),
+            'the page in the subsection is still to do'
+        );
+
+        $this->complete($setup, 'b', $setup['student']);
+        $this->assertSame(['done', 'current'], $this->states($courseid, 'progress'));
+    }
+
+    /**
+     * A section that holds only a subsection is marked by the activities inside it, and not left without a state.
+     *
+     * @return void
+     */
+    public function test_a_section_with_only_a_subsection_is_marked_by_its_activities(): void {
+        $this->resetAfterTest();
+        $setup = $this->make_subsection_course(false);
+        $courseid = (int) $setup['course']->id;
+
+        $this->setUser($setup['student']);
+        $this->assertSame(['current', 'todo'], $this->states($courseid, 'progress'));
+
+        $this->complete($setup, 'b', $setup['student']);
+        $this->assertSame(['done', 'current'], $this->states($courseid, 'progress'));
+    }
+
+    /**
+     * What a student cannot see inside a subsection does not count, and hiding the subsection hides all of it.
+     *
+     * @return void
+     */
+    public function test_progress_leaves_out_a_hidden_subsection(): void {
+        $this->resetAfterTest();
+        $setup = $this->make_subsection_course(false);
+        $courseid = (int) $setup['course']->id;
+        $subsection = array_values(get_fast_modinfo($courseid)->get_instances_of('subsection'))[0];
+        set_coursemodule_visible($subsection->id, 0);
+        rebuild_course_cache($courseid, true);
+
+        $this->setUser($setup['student']);
+
+        $this->assertSame(['none', 'current'], $this->states($courseid, 'progress'));
+    }
+
+    /**
      * The marker picks the mode, and anything unknown is the date.
      *
      * @return void
