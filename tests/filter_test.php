@@ -421,4 +421,48 @@ final class filter_test extends \advanced_testcase {
         $this->assertSame(['label' => 'a b', 'n' => 'x-1'], local\marker_options::parse(' label="a b" n=x-1'));
         $this->assertSame([], local\marker_options::parse(' Style=Tiles bad=A$ 9=x'));
     }
+
+    /**
+     * In the string stage (names and titles) a text with no marker is left as it is, and a marker is removed.
+     *
+     * @return void
+     */
+    public function test_the_string_stage_leaves_plain_text_and_removes_a_marker(): void {
+        $this->resetAfterTest();
+        $setup = $this->make_forum_course(1);
+        $this->setUser($setup['students'][0]);
+        $filter = $this->make_filter(\context_module::instance($setup['cm']->id));
+
+        $this->assertSame('A plain title', $filter->filter_stage_string('A plain title', []));
+        $this->assertSame('Title ', $filter->filter_stage_string('Title [FORUMSTATS]', []));
+    }
+
+    /**
+     * The bar shows nothing for a forum the viewer cannot see, for a forum with no student, and in a context that is
+     * not a forum, and so does the quiz widget for a quiz the viewer cannot see or a context that is not a quiz.
+     *
+     * @return void
+     */
+    public function test_widgets_show_nothing_where_there_is_nothing_to_show(): void {
+        $this->resetAfterTest();
+        $bar = new \filter_studiolms\widget\forumstats();
+        $rules = new \filter_studiolms\widget\quizinfo();
+
+        $hidden = $this->make_forum_course(2, ['visible' => 0]);
+        $this->setUser($hidden['students'][0]);
+        $this->assertSame('', $bar->render(\context_module::instance($hidden['cm']->id), []));
+        $this->assertSame('', $bar->render(\context_course::instance($hidden['course']->id), []));
+        $this->assertSame('', $rules->render(\context_course::instance($hidden['course']->id), []));
+        // A context with no course around it (the site) is not a forum nor a quiz.
+        $this->assertSame('', $bar->render(\context_system::instance(), []));
+        $this->assertSame('', $rules->render(\context_system::instance(), []));
+
+        $empty = $this->make_forum_course(0);
+        $this->setUser($empty['teacher']);
+        $this->assertSame('', $bar->render(\context_module::instance($empty['cm']->id), []));
+
+        $quiz = $this->getDataGenerator()->create_module('quiz', ['course' => $hidden['course']->id, 'visible' => 0]);
+        $this->setUser($hidden['students'][0]);
+        $this->assertSame('', $rules->render(\context_module::instance($quiz->cmid), []));
+    }
 }

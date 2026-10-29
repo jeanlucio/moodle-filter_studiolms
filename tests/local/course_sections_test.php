@@ -494,4 +494,17 @@ final class course_sections_test extends \advanced_testcase {
         $this->assertCount(1, $tiles['rows']);
         $this->assertCount(8, $tiles['rows'][0]['steps']);
     }
+
+    /**
+     * A format that has no sections at all (a single activity) has no map.
+     *
+     * @return void
+     */
+    public function test_a_single_activity_course_has_no_map(): void {
+        $this->resetAfterTest();
+        $setup = $this->make_course(0, ['format' => 'singleactivity', 'activitytype' => 'forum']);
+        $this->setUser($setup['student']);
+
+        $this->assertNull(course_sections::get_steps((int) $setup['course']->id));
+    }
 }
