@@ -1,0 +1,19 @@
+# Each entry needs an image at docs/assets/img/screenshots/<file>, plus an English and a Portuguese caption.
+- file: forum-bar.png
+  caption_en: "The participation bar in the description of a forum, as a student sees it: how much of the class has taken part, with the counts, and what is counted"
+  caption_pt: "A barra de participação na descrição de um fórum, como o estudante a vê: quanto da turma participou, com os números, e o que é contado"
+- file: map-date.png
+  caption_en: "The course map by date: the current section is the one the teacher highlighted (or the week of today)"
+  caption_pt: "O mapa do curso por data: a seção atual é a que o professor destacou (ou a semana de hoje)"
+- file: map-progress.png
+  caption_en: "The course map by the student's own progress: done, current step and what is still to come, from the completion of the activities"
+  caption_pt: "O mapa do curso pelo progresso do próprio estudante: concluída, etapa atual e o que ainda vem, a partir da conclusão das atividades"
+- file: map-tiles.png
+  caption_en: "The same map as tiles, which the filter chooses by itself when the course has many sections"
+  caption_pt: "O mesmo mapa em cartões, que o filtro escolhe sozinho quando o curso tem muitas seções"
+- file: quiz-rules.png
+  caption_en: "The rules of a quiz in its description: questions, time, attempts, the grade to pass, the grading method and the closing date, as they are now"
+  caption_pt: "As regras de um questionário na descrição dele: questões, tempo, tentativas, nota para passar, método de avaliação e a data de fechamento, como estão agora"
+- file: widgets-tab.png
+  caption_en: "With StudioLMS Editor installed, the Widgets tab of its dialog inserts the markers, and a block shows it in the editor"
+  caption_pt: "Com o StudioLMS Editor instalado, a aba Widgets do diálogo dele insere as marcas, e um bloco as mostra no editor"
