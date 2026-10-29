@@ -25,6 +25,9 @@
 /**
  * Execute filter_studiolms upgrade from the given old version.
  *
+ * The first public version has none; the file must exist, so a step is added here with the first change after
+ * that release.
+ *
  * @param int $oldversion The version we are upgrading from.
  * @return bool
  */
