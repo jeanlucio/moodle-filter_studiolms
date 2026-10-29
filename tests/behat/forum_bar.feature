@@ -77,7 +77,7 @@ Feature: The participation bar of a forum
     Given the following config values are set as admin:
       | minclasssize | 3 | filter_studiolms |
     And I log in as "teacher1"
-    And I add a "Forum" activity to course "Course 1" section "1" and I fill the form with:
+    And I add a "forum" activity to course "Course 1" section "1" and I fill the form with:
       | Forum name  | Typed forum    |
       | Description | [FORUMSTATS]   |
     When I am on the "Typed forum" "forum activity" page
