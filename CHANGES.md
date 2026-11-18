@@ -4,6 +4,15 @@ All notable changes to this plugin are documented here.
 
 ---
 
+## [v1.0.1] — 2026-11-18
+
+### Fixed
+- `[COURSEMAP]`: each step now links to the page of its section. In the Tiles format the link left students on
+  the closed tiles; it now opens the tile of the section. In other formats the step opens the page of that
+  section instead of scrolling the course page to it.
+
+---
+
 ## [v1.0.0] — 2026-10-29
 
 First public release.
