@@ -79,26 +79,37 @@ final class course_sections_test extends \advanced_testcase {
     }
 
     /**
-     * With all the sections on one page every step still has its own address, with the anchor of its section.
+     * Every step links to the page of its own section, whatever the format and its display.
      *
-     * Regression guard: the topics format of Moodle 4.5 returns the address of the whole page for every section.
+     * Regression guard: the tiles format opens a tile for the student only from that page, not from the course page
+     * with the section expanded, and it tells core it shows the whole course on one page.
      *
      * @return void
      */
-    public function test_single_page_course_gives_each_step_its_own_anchor(): void {
-        global $CFG;
+    public function test_every_step_links_to_the_page_of_its_section(): void {
         $this->resetAfterTest();
-        // A site installed in a folder, as the one of the CI, so the path of the address does not start at the course.
-        $CFG->wwwroot .= '/moodle';
-        $setup = $this->make_course(3, ['coursedisplay' => COURSE_DISPLAY_SINGLEPAGE]);
-        $this->setUser($setup['student']);
+        $cases = [
+            ['format' => 'topics', 'coursedisplay' => COURSE_DISPLAY_SINGLEPAGE],
+            ['format' => 'topics', 'coursedisplay' => COURSE_DISPLAY_MULTIPAGE],
+            ['format' => 'weeks', 'coursedisplay' => COURSE_DISPLAY_SINGLEPAGE],
+        ];
+        // The tiles format is not a dependency; the site may not have it.
+        if (\core_component::get_component_directory('format_tiles')) {
+            $cases[] = ['format' => 'tiles'];
+        }
 
-        $steps = course_sections::get_steps((int) $setup['course']->id);
+        foreach ($cases as $options) {
+            $setup = $this->make_course(3, $options);
+            $this->setUser($setup['student']);
 
-        $urls = array_column($steps, 'url');
-        $this->assertCount(3, array_unique($urls));
-        foreach ($urls as $position => $url) {
-            $this->assertStringContainsString('#section-' . ($position + 1), $url);
+            $steps = course_sections::get_steps((int) $setup['course']->id);
+
+            $sections = get_fast_modinfo($setup['course'])->get_section_info_all();
+            $expected = [];
+            foreach ([1, 2, 3] as $number) {
+                $expected[] = (new \moodle_url('/course/section.php', ['id' => $sections[$number]->id]))->out(false);
+            }
+            $this->assertSame($expected, array_column($steps, 'url'), $options['format']);
         }
     }
 

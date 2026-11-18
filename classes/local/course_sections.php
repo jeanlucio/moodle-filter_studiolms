@@ -192,28 +192,18 @@ class course_sections {
     }
 
     /**
-     * Returns the address of a section, which always tells the sections apart.
+     * Returns the address of the page of a section, the one the permalink of the section points to in core.
      *
-     * The topics format of Moodle 4.5 gives the address of the whole course page for every section, so the anchor of
-     * the section is added when the format left it out.
+     * The address of the course page with the section expanded is not used: the tiles format ignores both its
+     * expandsection parameter and its anchor in the student view, so the tile would not open.
      *
      * @param \core_courseformat\base $format The format of the course.
      * @param \section_info $section The section.
      * @return string The address, or an empty string when the format has none.
      */
     private static function get_url(\core_courseformat\base $format, \section_info $section): string {
-        $url = $format->get_view_url($section);
-        if (!$url) {
-            return '';
-        }
-        $address = $url->out(false);
-        $wholepage = str_ends_with($url->get_path(), '/course/view.php') && $url->get_param('section') === null
-            && strpos($address, '#') === false;
-        if ($wholepage) {
-            $url->set_anchor('section-' . $section->section);
-            $address = $url->out(false);
-        }
-        return $address;
+        $url = $format->get_view_url($section, ['navigation' => true]);
+        return $url ? $url->out(false) : '';
     }
 
     /**
